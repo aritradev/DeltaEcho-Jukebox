@@ -11,8 +11,6 @@
 ![Team DeltaEcho](https://img.shields.io/badge/Team-DeltaEcho-6C63FF?style=flat-square)
 ![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.2%20AAA%20target-2E7D32?style=flat-square)
 ![Audio Engine](https://img.shields.io/badge/Audio-Tone.js%20%2B%20Web%20Audio%20API-8E44AD?style=flat-square)
-![Pre-recorded audio](https://img.shields.io/badge/Pre--recorded%20audio-none-0ea5e9?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)
 
 [Live Demo](https://YOUR-DEMO-LINK) &nbsp;|&nbsp; [Pitch Video](https://YOUR-VIDEO-LINK) &nbsp;|&nbsp; [Challenge Page](https://www.spaceappschallenge.org/)
 
