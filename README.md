@@ -173,6 +173,43 @@ The system draws on 15 NASA datasets organized into three layers, plus three NAS
 
 > NASA POWER requires no API key and provides decades of daily data for any coordinate. It is the backbone of the fastest working pipeline in this project.
 
+### Satellite imagery pipeline (visual frame)
+
+The visual frame is built from true-color satellite imagery retrieved through the **NASA Worldview Snapshots API**, which is backed by NASA GIBS.
+
+- **Endpoint:** `https://wvs.earthdata.nasa.gov/api/v1/snapshot`
+- **Study areas:** Saint Martin's Island (Bangladesh's only coral island), Kutubdia Island (cyclone- and erosion-prone), the Sundarbans mangrove forest, and the northern Bay of Bengal coast (wide regional context, for example cyclone tracking).
+- **Temporal coverage:** 2004 to 2026, two representative images per year, targeting mid-February and mid-August to represent the first and second half of each year.
+- **Overlay:** the GIBS `Coastlines` layer is drawn over every image.
+
+**Layer selection.** For each location and date, the pipeline tries layers from sharpest to coarsest and keeps the first valid image.
+
+| Priority | GIBS layer | Sensor basis | Resolution | Used from |
+|:-:|---|---|:-:|:-:|
+| 1 | `HLS_L30_Nadir_BRDF_Adjusted_Reflectance` | Landsat | 30 m | 2015 |
+| 2 | `HLS_S30_Nadir_BRDF_Adjusted_Reflectance` | Sentinel-2 | 30 m | 2015 |
+| 3 | `VIIRS_SNPP_CorrectedReflectance_TrueColor` | VIIRS on Suomi NPP | 375 m | 2016 |
+| 4 | `MODIS_Terra_CorrectedReflectance_TrueColor` | MODIS on Terra | 250 m | 2004 (always-available fallback) |
+
+> [!NOTE]
+> HLS (Harmonized Landsat Sentinel-2) is a NASA product that merges Landsat and Sentinel-2 observations into one consistent 30 m record. Sentinel-2 itself is an ESA mission.
+
+**Quality and provenance controls**
+
+- HLS layers search within a window of plus or minus 6 days around the target date to find a usable acquisition; MODIS and VIIRS use the exact date.
+- Responses below a minimum valid image size are rejected and the next layer is tried.
+- Requested image dimensions are derived from each layer's native resolution to avoid blocky over-sampled output.
+- A metadata file records, for every image, the location, target date, date actually used, layer, resolution, bounding box, and the exact source URL, so each frame is traceable to its NASA request. The current run holds 183 records.
+
+**Imagery credit and references**
+
+- [NASA Worldview](https://worldview.earthdata.nasa.gov)
+- [NASA GIBS](https://www.earthdata.nasa.gov/eosdis/science-system-description/eosdis-components/gibs)
+- [Harmonized Landsat Sentinel-2 (HLS)](https://www.earthdata.nasa.gov/data/projects/hls)
+- Imagery: NASA EOSDIS, MODIS Terra, VIIRS SNPP, and HLS corrected reflectance.
+
+
+> NASA POWER requires no API key and provides decades of daily data for any coordinate. It is the backbone of the fastest working pipeline in this project.
 
 ---
 
