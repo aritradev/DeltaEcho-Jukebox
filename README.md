@@ -310,7 +310,7 @@ Accessibility is the foundation of the product, not an additional feature. The p
 **Requirements:** a modern browser (Chrome, Firefox, Edge, or Safari 14.1+) and any static file server.
 
 ```bash
-git clone https://github.com/<your-org>/earth-jukebox.git
+git clone https://github.com/aritradev/DeltaEcho-Jukebox.git
 cd earth-jukebox
 
 # No build step. Serve the folder:
