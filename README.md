@@ -6,11 +6,19 @@
 
 ### A browser-based sonification instrument that turns NASA Earth observations into live, explainable sound
 
-![NASA Space Apps 2026](https://img.shields.io/badge/NASA%20Space%20Apps-2026-0B3D91?style=flat-square)
-![Challenge 14](https://img.shields.io/badge/Challenge%2014-Earth%20Information%20Jukebox-FC3D21?style=flat-square)
-![Team DeltaEcho](https://img.shields.io/badge/Team-DeltaEcho-6C63FF?style=flat-square)
-![Accessibility](https://img.shields.io/badge/Accessibility-WCAG%202.2%20AAA%20target-2E7D32?style=flat-square)
-![Audio Engine](https://img.shields.io/badge/Audio-Tone.js%20%2B%20Web%20Audio%20API-8E44AD?style=flat-square)
+<br>
+
+![NASA Space Apps 2026](https://img.shields.io/badge/NASA%20SPACE%20APPS-2026-0B3D91?style=for-the-badge&labelColor=0a0a0a)
+![Challenge 14](https://img.shields.io/badge/CHALLENGE-14%20%7C%20EARTH%20INFORMATION%20JUKEBOX-FC3D21?style=for-the-badge&labelColor=0a0a0a)
+![Team](https://img.shields.io/badge/TEAM-DELTAECHO-6C63FF?style=for-the-badge&labelColor=0a0a0a)
+
+![Datasets](https://img.shields.io/badge/NASA%20datasets-15-0B3D91?style=flat-square&labelColor=1f2937)
+![Pre-recorded audio](https://img.shields.io/badge/pre--recorded%20audio-0%20files-0ea5e9?style=flat-square&labelColor=1f2937)
+![Backend](https://img.shields.io/badge/backend-none-475569?style=flat-square&labelColor=1f2937)
+![Audio](https://img.shields.io/badge/audio-Tone.js%20%2B%20Web%20Audio%20API-8E44AD?style=flat-square&labelColor=1f2937)
+![Accessibility](https://img.shields.io/badge/accessibility-WCAG%202.2%20AAA%20target-2E7D32?style=flat-square&labelColor=1f2937)
+
+<br>
 
 [Live Demo](https://YOUR-DEMO-LINK) &nbsp;|&nbsp; [Pitch Video](https://YOUR-VIDEO-LINK) &nbsp;|&nbsp; [Challenge Page](https://www.spaceappschallenge.org/)
 
