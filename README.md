@@ -117,7 +117,13 @@ Earth Jukebox is intended as a second representation of the same science, not as
 
 ---
 
-## Data Sources
+<div>
+
+<a href="#data-sources">
+  <img src="https://img.shields.io/badge/DATA%20SOURCES-1F2937?style=for-the-badge&labelColor=F4C542&color=F4C542" />
+</a>
+
+</div>
 
 The system draws on 15 NASA datasets organized into three layers, plus three NASA discovery and verification tools.
 
@@ -161,7 +167,6 @@ The system draws on 15 NASA datasets organized into three layers, plus three NAS
 
 > NASA POWER requires no API key and provides decades of daily data for any coordinate. It is the backbone of the fastest working pipeline in this project.
 
-<p align="right"><a href="#top">Back to top</a></p>
 
 ---
 
@@ -191,7 +196,6 @@ flowchart LR
 | Synthesis | Render pitch, timbre, rhythm, filter, and noise live with Tone.js |
 | Output | Emit audio, synchronized captions, described-audio narration, and haptic events from one shared timeline |
 
-<p align="right"><a href="#top">Back to top</a></p>
 
 ---
 
@@ -216,7 +220,6 @@ The principal risk in sonification is audio that sounds arbitrary. Earth Jukebox
 
 The mapping specification is intended to be published as an open, reusable sonification schema (see [Roadmap](#roadmap)).
 
-<p align="right"><a href="#top">Back to top</a></p>
 
 ---
 
@@ -244,7 +247,6 @@ Each detected fire becomes a percussive event. Early or low-activity periods are
 
 Sea level drives synthesized waves in proportion to the measured change. Past the flood threshold, a calm tide breaks into turbulent white noise, an acoustic warning that does not depend on vision.
 
-<p align="right"><a href="#top">Back to top</a></p>
 
 ---
 
@@ -259,7 +261,6 @@ Bangladesh contributes little to global emissions, yet its low-lying coast is am
 - Crossing a danger threshold also triggers haptic vibration on mobile devices, which is useful where connectivity is limited and screens are hard to read.
 - Planned: a Bangladesh preset combining coastal sea level with cyclone frequency.
 
-<p align="right"><a href="#top">Back to top</a></p>
 
 ---
 
@@ -276,7 +277,6 @@ Accessibility is the foundation of the product, not an additional feature. The p
 | Captions | On-screen text synchronized to every spoken and sonified cue |
 | Transparency | Active data-to-sound mapping displayed during playback |
 
-<p align="right"><a href="#top">Back to top</a></p>
 
 ---
 
@@ -290,7 +290,7 @@ Accessibility is the foundation of the product, not an additional feature. The p
 | Universal accessibility | WCAG AAA target, screen reader support, keyboard navigation, haptics, captions |
 | Team | Team DeltaEcho: six members, Chittagong, Bangladesh |
 
-<p align="right"><a href="#top">Back to top</a></p>
+
 
 ---
 
@@ -303,7 +303,7 @@ Accessibility is the foundation of the product, not an additional feature. The p
 | Imagery | NASA GIBS WMTS tiles for live satellite imagery |
 | Rendering | Canvas API for the synchronized visual frame |
 
-<p align="right"><a href="#top">Back to top</a></p>
+
 
 ---
 
@@ -337,7 +337,7 @@ earth-jukebox/
 `-- README.md
 ```
 
-<p align="right"><a href="#top">Back to top</a></p>
+
 
 ---
 
@@ -356,7 +356,7 @@ earth-jukebox/
 - Screen reader testing across common platforms and assistive technologies.
 - Cross-checking cached samples against Giovanni and Worldview to confirm data fidelity.
 
-<p align="right"><a href="#top">Back to top</a></p>
+
 
 ---
 
@@ -378,11 +378,7 @@ earth-jukebox/
 
 ---
 
-## License and Data Attribution
 
-Released under the MIT License. See [`LICENSE`](./LICENSE).
-
-NASA data products are in the public domain. Review each dataset's usage guidelines (GIBS, POWER, FIRMS, PO.DAAC, GRACE, and others) before redistribution.
 
 <div align="center">
 
