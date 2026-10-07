@@ -5,9 +5,9 @@
   "description": "A cinematic Solar System to Earth to region visual prototype (Phase 1).",
   "type": "module",
   "scripts": {
-    "dev": "node server.mjs",
-    "build": "node -e \\\"console.log('Static site — no build step needed')\\\"",
-    "start": "node server.mjs"
+    "dev": "node dev/server.mjs",
+    "build": "echo Static site - no build step needed",
+    "start": "node dev/server.mjs"
   },
   "engines": {
     "node": ">=18"
