@@ -1,1 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Earth Information Jukebox — Phase 1</title>
+<meta name="description" content="A cinematic Solar System to Earth to region visual prototype." />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%226%22%20fill%3D%22%23030508%22%2F%3E%3Ccircle%20cx%3D%2216%22%20cy%3D%2216%22%20r%3D%229%22%20fill%3D%22%231f4d8c%22%2F%3E%3Ccircle%20cx%3D%2219.5%22%20cy%3D%2213.5%22%20r%3D%221.4%22%20fill%3D%22%23a9d2f0%22%20opacity%3D%22.7%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2218%22%20r%3D%221.1%22%20fill%3D%22%23cfe2fb%22%20opacity%3D%22.55%22%2F%3E%3C%2Fsvg%3E" />
+<link rel="stylesheet" href="./styles.css" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js"
+  }
+}
+</script>
+</head>
+<body>
 
+<div id="stage">
+  <canvas id="scene"></canvas>
+</div>
+
+<div id="veil" aria-hidden="true"></div>
+<div id="veil-noise" aria-hidden="true"></div>
+<div id="vignette" aria-hidden="true"></div>
+<div id="grain" aria-hidden="true"></div>
+
+<header id="masthead">
+  <div class="mast-mark">E<span>/</span>I<span>/</span>J</div>
+  <div class="mast-text">
+    <strong>Earth Information Jukebox</strong>
+    <span>Phase 1 · visual prototype</span>
+  </div>
+</header>
+
+<div id="readout" aria-hidden="true">
+  <div class="ro-row"><span class="ro-key">view</span><span class="ro-val" id="ro-state">solar system</span></div>
+  <div class="ro-row"><span class="ro-key">target</span><span class="ro-val" id="ro-target">bay of bengal · 16.5°N 89.0°E</span></div>
+</div>
+
+<aside id="panel" class="panel">
+  <div class="panel-inner">
+    <p class="eyebrow">Explore Earth</p>
+    <h1 class="panel-title">What do you<br />want to hear?</h1>
+
+    <nav class="choices" id="choices">
+      <button class="choice" data-key="ocean">
+        <span class="glyph">&#127754;</span>
+        <span class="choice-body">
+          <span class="choice-name">Ocean</span>
+          <span class="choice-desc">Listen to Earth's oceans</span>
+        </span>
+        <span class="choice-tick"></span>
+      </button>
+      <button class="choice" data-key="atmosphere">
+        <span class="glyph">&#127783;</span>
+        <span class="choice-body">
+          <span class="choice-name">Atmosphere</span>
+          <span class="choice-desc">Listen to Earth's atmosphere</span>
+        </span>
+        <span class="choice-tick"></span>
+      </button>
+      <button class="choice" data-key="land">
+        <span class="glyph">&#127793;</span>
+        <span class="choice-body">
+          <span class="choice-name">Land</span>
+          <span class="choice-desc">Listen to Earth's land</span>
+        </span>
+        <span class="choice-tick"></span>
+      </button>
+    </nav>
+
+    <div class="divider"><span>or</span></div>
+
+    <button class="place" id="place-btn">
+      <span class="place-label">Explore a place</span>
+      <span class="place-name">Bay of Bengal</span>
+      <span class="place-meta">1 region available</span>
+    </button>
+
+    <p class="panel-foot">
+      <span class="key-hint"><b>drag</b> rotate</span>
+      <span class="key-hint"><b>scroll</b> zoom</span>
+    </p>
+  </div>
+</aside>
+
+<div id="selection-note" class="selection-note" aria-live="polite">
+  <span class="sn-eyebrow" id="sn-eyebrow">Ocean</span>
+  <span class="sn-line">Let's find somewhere to listen.</span>
+  <span class="sn-dest" id="sn-dest">Destination available · Bay of Bengal</span>
+</div>
+
+<div id="anchor" class="anchor" aria-hidden="true">
+  <span class="anchor-reticle"></span>
+  <span class="anchor-copy">
+    <strong>Bay of Bengal</strong>
+    <em>Available region</em>
+  </span>
+</div>
+
+<aside id="destination" class="destination" aria-live="polite">
+  <div class="dest-inner">
+    <p class="eyebrow">Destination</p>
+    <h2 class="dest-title">Bay of Bengal</h2>
+    <p class="dest-sub">Bangladesh &middot; northern Indian Ocean</p>
+    <dl class="dest-meta">
+      <div><dt>position</dt><dd>16.5&deg;N&nbsp; 89.0&deg;E</dd></div>
+      <div><dt>state</dt><dd>available to explore</dd></div>
+    </dl>
+    <button class="dest-btn" id="listen-btn" disabled>
+      <span class="dest-btn-label">Listen</span>
+      <span class="dest-btn-tag">Coming next</span>
+    </button>
+    <p class="dest-note">Phase 1 is a visual journey only. No observation data or sound is processed yet.</p>
+  </div>
+</aside>
+
+<nav id="backbar" class="backbar" aria-hidden="true">
+  <button id="back-btn" class="back-btn">
+    <span class="back-arrow">&#8592;</span>
+    <span>Back to solar system</span>
+  </button>
+</nav>
+
+<div id="hint" class="hint" aria-live="polite"></div>
+
+<div id="loader" class="loader">
+  <div class="loader-inner">
+    <p class="loader-mark">
+      <span>Earth</span>
+      <span>Information</span>
+      <span>Jukebox</span>
+    </p>
+    <p class="loader-sub" id="loader-sub">Preparing the observatory&hellip;</p>
+    <div class="loader-track"><span class="loader-fill" id="loader-fill"></span></div>
+    <button class="enter-btn" id="enter-btn" disabled>Enter the observatory</button>
+    <p class="loader-foot">Visual prototype &middot; no audio in this phase</p>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
