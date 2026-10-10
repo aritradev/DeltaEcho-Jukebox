@@ -20,7 +20,7 @@
 
 <br>
 
-[Live Demo](https://YOUR-DEMO-LINK) &nbsp;|&nbsp; [Pitch Video](https://YOUR-VIDEO-LINK) &nbsp;|&nbsp; [Challenge Page](https://www.spaceappschallenge.org/)
+[Live Demo](https://earth-jukebox-tau.vercel.app/) &nbsp;|&nbsp; [Pitch Video](https://YOUR-VIDEO-LINK) &nbsp;|&nbsp; [Challenge Page](https://www.spaceappschallenge.org/)
 
 </div>
 
