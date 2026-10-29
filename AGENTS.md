@@ -18,7 +18,7 @@ Read this first, then the document that matches your task:
 - **Phase 1** of the Earth Information Jukebox: a cinematic Solar System → Earth →
   Bay of Bengal visual prototype.
 - Vanilla JavaScript ES modules. No framework, no bundler, no transpiler.
-- No npm dependencies. Three.js r170 and GSAP 3.12.5 are vendored.
+- No npm dependencies. Three.js and GSAP are vendored (versions in `README.md`).
 - No backend. `server.mjs` is a static file server for local development only.
 - No test suite, linter, or CI yet, so verification is manual.
 

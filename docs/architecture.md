@@ -296,8 +296,9 @@ Overlay elements in `index.html`, back to front:
 #loader           progress + entry gate
 ```
 
-Body classes `grab` and `pointing` are the cursor contract; `main.js` toggles them
-based on mode and hover.
+Body classes `grab`, `grabbing`, and `pointing` are the cursor contract: `main.js`
+toggles `grab`/`pointing` by mode and hover, `controls.js` toggles `grabbing`
+during a drag.
 
 ---
 
