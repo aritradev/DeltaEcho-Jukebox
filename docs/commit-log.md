@@ -13,7 +13,8 @@ Newest last. Update this file whenever a commit is added.
 | 3 | `9ec925a` | 2026-10-29 | `docs: add agent guide and architecture notes` | `AGENTS.md`, `docs/architecture.md` |
 | 4 | `8ab5577` | 2026-10-29 | `docs: add workflow and context architecture guides` | `docs/workflow.md`, `docs/context-architecture.md`, small fixes in `AGENTS.md` + `docs/architecture.md` |
 | 5 | `413534e` | 2026-10-29 | `docs: add camera transition contract` | `docs/camera-transitions.md` (new), links in `AGENTS.md`, `docs/architecture.md`, `docs/workflow.md`, `docs/context-architecture.md` |
-| 6 | this commit | 2026-10-29 | `docs: add commit log` | `docs/commit-log.md` (this file) |
+| 6 | `1a0b4c7` | 2026-10-29 | `docs: add commit log` | `docs/commit-log.md` (this file) |
+| 7 | this commit | 2026-10-30 | `feat: replace galaxy backdrop with a baked nebula sky` | `src/starfield.js`, `src/assets.js`, `src/main.js`, `assets/textures/smoke.png` (new), `README.md`, `AGENTS.md`, `docs/architecture.md`, `docs/commit-log.md` |
 
 ---
 
@@ -55,9 +56,38 @@ multi-region notes) and wires it into the four existing docs.
 
 Documentation only, no code change. Safe to revert; the app behaves identically.
 
-## 6. commit log
+## 6. `1a0b4c7` — commit log
 
 Adds this file. Documentation only.
+
+## 7. baked nebula sky
+
+Replaces the `galaxy.webp` sphere backdrop with a nebula baked from
+`assets/textures/smoke.png`, matching the reference build's muted purple/maroon
+look.
+
+- `src/starfield.js`: the old synthetic-gradient backdrop is gone. `NEBULA` holds
+  the tuning; `buildSmokeBrush` turns `smoke.png` into a density map;
+  `buildNebulaTexture` stamps ~250 sprites into a float buffer and bakes one
+  2048×1024 equirectangular texture, drawn on an inward-facing sphere.
+- `src/assets.js`: `GALAXY_MAPS = ['galaxy.webp']` becomes
+  `BACKDROP_MAPS = ['smoke.png']`.
+- `src/main.js`: one line, passing the `smoke.png` texture to `Starfield`.
+- `assets/textures/smoke.png`: new 29 KB brush asset.
+
+Nothing else changed: camera, controls, config, planets, Earth, sun, region and the
+mode machine are untouched. Star shells keep the same seed and count.
+
+**Background only.** Reverting restores the `galaxy.webp` backdrop and leaves the
+rest of the app identical. `galaxy.webp`, `galaxy.jpg` and `moon.jpg` are untouched
+and still present, so no asset is lost either way. To revert just the code:
+
+```powershell
+git revert <hash>
+# or, to drop the files by hand:
+git checkout e2118e3 -- src/starfield.js src/assets.js src/main.js
+Remove-Item assets/textures/smoke.png
+```
 
 ---
 
@@ -80,7 +110,9 @@ git diff 8ab5577 413534e -- docs/architecture.md
 
 Notes:
 
-- Commits 2–5 are documentation only. Reverting any of them cannot break the app.
+- Commits 2–6 are documentation only. Reverting any of them cannot break the app.
+- Commit 7 changes only the sky backdrop. Reverting it restores the `galaxy.webp`
+  sphere and does not touch camera, planets, Earth, or UI behaviour.
 - Commit 1 is the whole application. Never revert it unless you intend to delete the
   project files.
 - `docs/camera-transitions.md` records a dated baseline, so restoring an older

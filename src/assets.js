@@ -10,19 +10,19 @@ const EARTH_MAPS = [
   'earth_clouds.png'
 ];
 
+const BACKDROP_MAPS = ['smoke.png'];
+
 const BODY_MAPS = [
   'sun.jpg',
   ...PLANETS.filter((p) => p.key !== 'earth').map((p) => p.map),
   ...PLANETS.filter((p) => p.ring).map((p) => p.ring.map)
 ];
 
-const GALAXY_MAPS = ['galaxy.webp'];
-
 export class AssetLoader {
   constructor(onProgress) {
     this.onProgress = onProgress;
     this.textures = {};
-    this.files = [...BODY_MAPS, ...EARTH_MAPS, ...GALAXY_MAPS];
+    this.files = [...BODY_MAPS, ...EARTH_MAPS, ...BACKDROP_MAPS];
     this.loaded = 0;
   }
 

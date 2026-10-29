@@ -57,7 +57,7 @@ repository root, rejects traversal outside it, sets content types, and sends
 │   ├── config.js           Central tuning: render, planets, region, states, timelines
 │   ├── assets.js           Texture loading with progress reporting
 │   ├── utils.js            Math helpers (clamp, lerp, smoothstep, seeded RNG)
-│   ├── starfield.js        Galaxy backdrop and star points
+│   ├── starfield.js        Baked nebula sky and star points
 │   ├── sun.js              Procedural sun surface, corona, and flares
 │   ├── solar-system.js     Planet orbits, Saturn ring, shared sun position
 │   ├── earth.js            Earth surface, night lights, clouds, atmosphere shader
@@ -65,7 +65,7 @@ repository root, rejects traversal outside it, sets content types, and sends
 │   ├── camera-director.js  Keyframed camera states and transitions
 │   ├── controls.js         Drag-to-rotate and scroll-to-zoom input
 │   └── ui.js               DOM bindings: loader, panel, readout, destination card
-├── assets/textures/        17 texture images (15 currently referenced)
+├── assets/textures/        18 texture images (15 currently referenced)
 └── vendor/
     ├── three.module.js     Three.js r170
     └── gsap/               GSAP 3.12.5 (core, CSSPlugin, ESM index)
@@ -112,14 +112,18 @@ file over scattering magic numbers through modules.
 
 ## Assets
 
-`assets/textures/` holds 17 images. Fifteen are referenced by
+`assets/textures/` holds 18 images. Fifteen are referenced by
 `src/assets.js` and `src/config.js`.
 
-Two files are currently unreferenced but intentionally retained:
+`smoke.png` is the cloud sprite that the nebula sky is painted from; the backdrop
+is baked from it once at startup, so no other sky image is needed at runtime.
+
+Three files are currently unreferenced but intentionally retained:
 
 | File | Note |
 | --- | --- |
-| `galaxy.jpg` | Superseded by `galaxy.webp`, which is the texture actually loaded |
+| `galaxy.jpg` | An earlier galaxy backdrop, no longer used |
+| `galaxy.webp` | Replaced by the baked nebula, which paints from `smoke.png` |
 | `moon.jpg` | No Moon body exists in `PLANETS` yet |
 
 `sun.jpg` is loaded but unused while `SUN.procedural` is `true`.

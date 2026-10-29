@@ -34,8 +34,9 @@ Read this first, then the document that matches your task:
    reports "space before tab in indent" in `vendor/gsap/CSSPlugin.js`; that is
    accepted and must not be fixed.
 3. **Do not modify `assets/textures/`** unless the task is explicitly about art.
-   `galaxy.jpg`, `moon.jpg`, and `sun.jpg` are currently unused but intentionally
-   kept. Removing them is a product decision, not cleanup.
+   `galaxy.jpg`, `galaxy.webp`, `moon.jpg`, and `sun.jpg` are currently unused but
+   intentionally kept. Removing them is a product decision, not cleanup.
+   `smoke.png` is in use: it is the cloud sprite the nebula sky is baked from.
 4. **Keep text files LF and images binary** as declared in `.gitattributes`. Do not
    introduce CRLF or reformat whole files.
 5. **No secrets.** No API keys, tokens, credentials, or `.env` files in the repo.
@@ -83,7 +84,7 @@ There is no `npm install`, no `npm test`, and no `npm run build`.
 | Region marker geometry and shaders | `src/region.js` |
 | Sun surface, corona, flares | `src/sun.js` |
 | Planet orbits, Saturn ring, orbit lines | `src/solar-system.js` |
-| Starfield and galaxy backdrop | `src/starfield.js` |
+| Nebula sky backdrop and stars | `src/starfield.js` |
 | Texture loading | `src/assets.js` |
 | Overlay text, buttons, layout | `index.html` + `ui.js` |
 | Overlay appearance | `styles.css` |

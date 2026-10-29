@@ -87,7 +87,7 @@ class App {
   buildWorld() {
     const pixelRatio = this.renderer.getPixelRatio();
 
-    this.starfield = new Starfield(pixelRatio, this.textures['galaxy.webp']);
+    this.starfield = new Starfield(pixelRatio, this.textures['smoke.png']);
     this.scene.add(this.starfield.group);
 
     this.solar = new SolarSystem(this.textures, this.renderer);

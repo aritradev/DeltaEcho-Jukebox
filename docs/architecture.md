@@ -82,7 +82,7 @@ The app instance is exposed as `window.__jukebox` for debugging.
 | `src/config.js` | All tuning constants: render, sun, planets, Earth, clouds, atmosphere, region, states, timelines, categories | — |
 | `src/utils.js` | Math and DOM-canvas helpers, spherical conversions, seeded RNG | three |
 | `src/assets.js` | Texture manifest and loading, progress callbacks, derived roughness map | three, config |
-| `src/starfield.js` | Galaxy backdrop, star shells, parallax response to camera | three, utils |
+| `src/starfield.js` | Baked nebula sky, star shells, parallax response to camera | three, utils |
 | `src/sun.js` | Procedural sun: baked noise, surface shader, glow, rays, flares | three, utils |
 | `src/solar-system.js` | Sun placement, planet orbits and spins, Saturn ring, orbit lines, corona | three, config, sun |
 | `src/earth.js` | Earth surface, night lights, clouds, atmosphere/haze shaders, framing helpers | three, config, utils |
@@ -290,13 +290,14 @@ during a drag.
 
 ## 11. Assets
 
-`AssetLoader` declares three groups: Earth maps, body maps, and the galaxy map.
+`AssetLoader` declares three groups: Earth maps, body maps, and the backdrop map.
+The backdrop group is `smoke.png`, the cloud sprite the nebula sky is painted from.
 Progress is reported as a ratio and mapped by the App onto the loader bar.
 
-Two textures are intentionally unreferenced: `galaxy.jpg` (superseded by
-`galaxy.webp`) and `moon.jpg` (no Moon body yet). `sun.jpg` is loaded but ignored
-while `SUN.procedural` is `true`. Do not delete these as drive-by cleanup; their
-removal is a product decision.
+Three textures are intentionally unreferenced: `galaxy.jpg` and `galaxy.webp`
+(earlier galaxy backdrops, replaced by the baked nebula) and `moon.jpg` (no Moon
+body yet). `sun.jpg` is loaded but ignored while `SUN.procedural` is `true`. Do not
+delete these as drive-by cleanup; their removal is a product decision.
 
 ---
 
@@ -307,6 +308,11 @@ removal is a product decision.
   the existing scale rather than pushing the far plane.
 - The starfield uses a fixed number of shells and points; it is a backdrop, not a
   simulation.
+- The nebula sky is baked once at startup into a single equirectangular texture and
+  drawn as one inward-facing sphere, so it costs one draw call and no per-frame
+  overdraw. The bake stamps a few hundred `smoke.png` sprites into a float buffer;
+  that is load-time work, not frame work. `NEBULA` in `src/starfield.js` holds the
+  tuning (`gain`, sprite count, cluster layout).
 - The sun bakes its noise cube once at startup (`SUN.quality.bakeSize`) and then
   animates cheaply in shaders. Reducing `quality` values is the first lever on
   low-end GPUs.
