@@ -143,6 +143,8 @@ Rules that follow from this split:
 - Never start a scripted transition while `mode === FLYING`.
 - `onUserIntent()` may interrupt a flight; when it does, the mode becomes
   `EXPLORE` if the rig is close (`dist < 6`), otherwise `SOLAR`.
+- Interruption recovery guarantees are specified in
+  [`camera-transitions.md`](camera-transitions.md) §7.
 - `hotspotArmed` gates whether the region can be hovered or clicked.
 
 ---
@@ -186,35 +188,19 @@ camera must express intent through `director.rig` or a director method.
 
 ## 7. Camera system
 
-`CameraDirector` maintains a small, animatable rig:
+`CameraDirector` owns an animatable rig — `dist`, `az`, `el`, `fov`, `focus`,
+`offX`, `offY` — and converts it to a camera transform in `apply()`. GSAP tweens
+the rig; nothing tweens the camera. It also owns the scene parameters the render
+loop reads: `spinScale`, `cloudOpacity`, `veil`, `regionVisibility`,
+`coronaScale`, `orbitLineFade`, and `punch`.
 
-| Field | Meaning |
-| --- | --- |
-| `dist` | Distance from Earth centre, in Earth radii |
-| `az` | Azimuth around Earth, radians |
-| `el` | Elevation, radians |
-| `fov` | Camera field of view |
-| `focus` | Look-at bias toward the region |
-| `offX`, `offY` | Screen-space framing offsets for UI composition |
+`WIDE` (top of the file) is the canonical solar-system framing and `REGION_EL`
+shifts the regional shot.
 
-`apply()` converts rig values into a world position using
-`sphericalToVector3`, orients the camera, and writes the result. GSAP tweens the
-rig object, never the camera directly.
-
-Derived scene parameters are also owned here and read by the loop:
-
-```text
-spinScale, cloudOpacity, veil, regionVisibility, coronaScale, orbitLineFade, punch
-```
-
-`beginFlight`, `continueToRegion`, `enterFreeOrbit`, and `returnToSolarSystem`
-build GSAP timelines; `interrupt()` kills the active timeline and reports whether a
-flight was actually cancelled. `solveSunFraming()` runs once at startup to choose
-the Earth spin and wide azimuth that puts the Sun and the Bay of Bengal in a
-consistent composition.
-
-`WIDE` (top of the file) is the canonical solar-system framing. Changing it shifts
-the whole opening shot; changing `REGION_EL` shifts the regional shot.
+The transition choreography, exact timings, interruption recovery, and cleanup
+guarantees are specified in [`camera-transitions.md`](camera-transitions.md). That
+document owns the current camera behaviour; this section is an orientation only.
+Its timings are a dated baseline, not a freeze.
 
 ---
 

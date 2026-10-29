@@ -34,19 +34,21 @@ Load in order. Stop as soon as you have what you need.
 
 | Layer | Document | Answers | Typical size |
 | --- | --- | --- | --- |
-| 0 | [`AGENTS.md`](../AGENTS.md) | What are the rules? Where do I change things? | ~140 lines |
+| 0 | [`AGENTS.md`](../AGENTS.md) | What are the rules? Where do I change things? | ~145 lines |
 | 1 | [`README.md`](../README.md) | What is this? How do I run it? What is in the tree? | ~170 lines |
-| 2 | [`architecture.md`](architecture.md) | How do the modules, states, and render loop fit together? | ~350 lines |
-| 3 | This file, [`workflow.md`](workflow.md) | How is knowledge and work organized? | ~230 lines each |
-| 4 | Source files | What does the code actually do, line by line? | varies |
-| 5 | `git log` | Why did it become this way? | varies |
+| 2 | [`architecture.md`](architecture.md) | How do the modules, states, and render loop fit together? | ~340 lines |
+| 3 | [`camera-transitions.md`](camera-transitions.md) | What must the camera do, and how is interruption recovered? | ~690 lines |
+| 4 | This file, [`workflow.md`](workflow.md) | How is knowledge and work organized? | ~230 lines each |
+| 5 | Source files | What does the code actually do, line by line? | varies |
+| 6 | `git log` | Why did it become this way? | varies |
 
 ### Reading paths by task
 
 | Task | Path |
 | --- | --- |
 | Fix a shader artefact | `AGENTS.md` → `architecture.md` §8 (Earth stack) or §9 (region) → the module |
-| Adjust camera timing | `AGENTS.md` → `architecture.md` §7 → `config.js`, `camera-director.js` |
+| Adjust camera timing | `AGENTS.md` → `camera-transitions.md` (protected) → `config.js`, `camera-director.js` |
+| Verify camera or interruption behaviour | `camera-transitions.md` §9 (manual only) |
 | Add a planet | `AGENTS.md` → `architecture.md` §13 → `config.js`, `assets.js` |
 | Change UI copy | `README.md` (structure) → `index.html`, `ui.js` |
 | Onboard a new contributor | `README.md` → `architecture.md` §1–§6 → `workflow.md` |
@@ -70,6 +72,7 @@ When two documents could state the same fact, only one owns it.
 | Library versions | `README.md` → Vendored dependencies | reference, do not restate |
 | Run commands and ports | `README.md` → Quick start | repeat only the short form |
 | Tuning constants and their values | `src/config.js` | describe the knob, not the number |
+| Camera timings, transition targets, interruption semantics | `docs/camera-transitions.md` (authoritative baseline) | link; never restate its guarantees |
 | Module responsibilities | `docs/architecture.md` §4 | one-line mentions |
 | Rules and prohibitions | `AGENTS.md` | link |
 | Commit conventions | `docs/workflow.md` §6 | link |
@@ -78,6 +81,12 @@ When two documents could state the same fact, only one owns it.
 **Never copy a numeric constant into prose.** Writing "the far plane is 12,000" is
 acceptable only as a description of *why* the value matters; the moment it is used
 as the authoritative value, it will drift. Prefer "the far plane is set in `RENDER`".
+
+The one deliberate exception is [`camera-transitions.md`](camera-transitions.md): it
+records a dated baseline of timings and targets on purpose, because a contract that
+defers entirely to the code cannot show drift. Its §11 distinguishes protected
+reliability guarantees from baseline choreography that may be changed deliberately,
+and requires the affected entries to be updated in the same commit.
 
 ### Conflict resolution
 

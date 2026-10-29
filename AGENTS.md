@@ -8,6 +8,7 @@ Read this first, then the document that matches your task:
 | --- | --- |
 | [`README.md`](README.md) | What the project is, how to run it, file layout |
 | [`docs/architecture.md`](docs/architecture.md) | Module boundaries, state machines, render loop, conventions |
+| [`docs/camera-transitions.md`](docs/camera-transitions.md) | Camera baseline timings, cinematic sequence, interruption guarantees, manual checks |
 | [`docs/workflow.md`](docs/workflow.md) | How to make, verify, and commit a change |
 | [`docs/context-architecture.md`](docs/context-architecture.md) | Where documentation lives and how to keep it accurate |
 
@@ -42,6 +43,12 @@ Read this first, then the document that matches your task:
    parent directory.
 7. **Do not touch sibling copies** of this project elsewhere on disk. This
    repository is the only authoritative copy.
+8. **Camera behaviour is documented and regression-checked.** The cinematic camera
+   experience and its interruption-recovery guarantees are specified in
+   [`docs/camera-transitions.md`](docs/camera-transitions.md). Timings and targets
+   there are a dated baseline, not permanent requirements: intentional changes are
+   allowed through review, but must keep the reliability guarantees, pass the
+   regression checks in §9.3, and update that document in the same commit.
 
 ---
 

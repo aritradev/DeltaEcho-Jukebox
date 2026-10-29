@@ -117,7 +117,9 @@ Minimum bar for any visible change:
 1. Loader completes; no console errors or shader compile failures.
 2. Intro dolly lands on the solar system.
 3. A category selection completes the flight and shows the destination card.
-4. Drag, zoom, and flight interruption behave.
+4. Camera transitions, and especially mid-flight interruption, match the manual
+   matrix in [`camera-transitions.md`](camera-transitions.md) §9. There is no
+   automation for this; perform the checks and report which ones you ran.
 5. Back / Escape returns to the solar system.
 6. Window resize keeps overlays aligned.
 
@@ -223,6 +225,7 @@ A change is not finished until its documentation is true.
 | --- | --- |
 | Run instructions, structure, dependencies | `README.md` |
 | Module responsibilities, data flow, state machines | `docs/architecture.md` |
+| Camera timing, choreography, or interruption behaviour | `docs/camera-transitions.md` — update its baseline and rerun §9.3 |
 | Team rules, commands, verification steps | `AGENTS.md` or this file |
 | Where documentation lives or how it is maintained | `docs/context-architecture.md` |
 
