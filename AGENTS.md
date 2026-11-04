@@ -16,8 +16,9 @@ Read this first, then the document that matches your task:
 
 ## Project snapshot
 
-- **Phase 1** of the Earth Information Jukebox: a cinematic Solar System → Earth →
-  Bay of Bengal visual prototype.
+- **Phase 2 alpha** of the Earth Information Jukebox: a cinematic Solar System →
+  Earth → Cox's Bazar visual prototype, ending on a flat continent/locality map
+  stage after the cloud entry.
 - Vanilla JavaScript ES modules. No framework, no bundler, no transpiler.
 - No npm dependencies. Three.js and GSAP are vendored (versions in `README.md`).
 - No backend. `server.mjs` is a static file server for local development only.
@@ -82,6 +83,7 @@ There is no `npm install`, no `npm test`, and no `npm run build`.
 | Input handling (drag, zoom, pinch) | `src/controls.js` |
 | Earth materials, clouds, atmosphere | `src/earth.js` |
 | Region marker geometry and shaders | `src/region.js` |
+| Flat map windows and zoom | `src/atlas.js` + `ATLAS` in `src/config.js` |
 | Sun surface, corona, flares | `src/sun.js` |
 | Planet orbits, Saturn ring, orbit lines | `src/solar-system.js` |
 | Nebula sky backdrop and stars | `src/starfield.js` |

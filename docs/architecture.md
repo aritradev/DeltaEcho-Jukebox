@@ -61,6 +61,7 @@ AssetLoader.loadAll()            await all textures, report progress
 buildWorld()                     starfield, solar system, lights, earth, region
   └── CameraDirector(...)        computes framing, owns the rig
       └── ExplorerControls(...)  input, attached to the same canvas
+      └── Atlas(...)             flat-map plates, parented to the camera
 director.apply()                 place the camera before the first frame
 ui.showEnter()                   enable the "Enter the observatory" button
 clock.start(); loop()            animation begins
@@ -87,6 +88,7 @@ The app instance is exposed as `window.__jukebox` for debugging.
 | `src/solar-system.js` | Sun placement, planet orbits and spins, Saturn ring, orbit lines, corona | three, config, sun |
 | `src/earth.js` | Earth surface, night lights, clouds, atmosphere/haze shaders, framing helpers | three, config, utils |
 | `src/region.js` | Region footprint, beam, particles, reticle, hotspot hit target | three, config, utils |
+| `src/atlas.js` | Flat map stage: camera-attached plates, per-frame window math | three, config, utils |
 | `src/camera-director.js` | Camera rig, keyframes, transitions, derived scene parameters | three, gsap, config, utils |
 | `src/controls.js` | Drag/scroll/pinch input mapped to the rig, intent signaling | three, config |
 | `src/ui.js` | All DOM reads/writes and overlay animation | gsap, config |
@@ -94,10 +96,11 @@ The app instance is exposed as `window.__jukebox` for debugging.
 ### Direction of dependencies
 
 ```text
-main.js  ──>  ui.js, controls.js, camera-director.js, region.js,
+main.js  ──>  ui.js, controls.js, camera-director.js, atlas.js, region.js,
               earth.js, solar-system.js, starfield.js, assets.js, config.js
 
 camera-director.js ──> earth.js (queries), region.js (queries), config.js
+atlas.js ──> config.js, utils.js
 earth.js / region.js / solar-system.js ──> config.js, utils.js
 config.js ──> (nothing)
 ```
@@ -120,11 +123,16 @@ emits `onStateChange`, which updates the readout label.
 
 ```text
 SOLAR_SYSTEM -> EARTH_APPROACH -> EARTH_ORBIT -> REGION_APPROACH
-             -> CLOUD_ENTRY -> REGION_REVEAL -> REGION_HOTSPOT
+             -> CLOUD_ENTRY -> CONTINENT -> COUNTRY -> LOCALITY
 ```
 
 These are sequential keyframes, not user-controllable modes. Backwards travel
 replays the framing in reverse rather than stepping the enum backwards.
+
+`CONTINENT`, `COUNTRY`, and `LOCALITY` are the flat-map stage: the camera stops
+being the protagonist and `src/atlas.js` takes over the picture. The last three
+states are still emitted by the same director timeline, so the readout and the
+completion callback behave exactly as before.
 
 ### 5.2 Interaction modes — `MODE` in `src/main.js`
 
@@ -136,7 +144,7 @@ interactive.
 | `SOLAR` | Wide observatory view, panel available | Clicking Earth begins `EXPLORE` |
 | `EXPLORE` | Free orbit around Earth | Hotspot click continues to the region |
 | `FLYING` | A scripted camera transition is running | Clicking is ignored |
-| `REGION` | Region locked, destination card shown | Hotspot click punches in |
+| `ATLAS` | Flat map is on screen, destination card shown | No drag or zoom; Back/Escape leaves |
 
 Rules that follow from this split:
 
@@ -146,6 +154,9 @@ Rules that follow from this split:
 - Interruption recovery guarantees are specified in
   [`camera-transitions.md`](camera-transitions.md) §7.
 - `hotspotArmed` gates whether the region can be hovered or clicked.
+- Entering `ATLAS` disables `ExplorerControls`; only the Back callback re-enables
+  them. The map is never interactive, which is why it needs no drag handling of its
+  own.
 
 ---
 
@@ -172,6 +183,8 @@ sunLight.position.copy(solar.sunPosition)
 
 controls.update(delta)                  user input -> rig
 director.apply()                        rig -> camera position/quaternion
+atlas.sync([atlasA, atlasB])            hand the map state to the renderer module
+atlas.update()                          state -> texture offset/repeat, visibility
 scene.updateMatrixWorld(true)
 
 updateHotspot(delta)                    raycast, region uniforms, anchor label
@@ -184,6 +197,10 @@ renderer.render(scene, camera)
 The director is the single writer of camera transforms. Anything that moves the
 camera must express intent through `director.rig` or a director method.
 
+`atlas.update()` runs after `director.apply()` because the plates scale to the
+camera's current FOV and aspect; running it earlier would draw a one-frame-stale
+window while a transition is changing `fov`.
+
 ---
 
 ## 7. Camera system
@@ -192,7 +209,12 @@ camera must express intent through `director.rig` or a director method.
 `offX`, `offY` — and converts it to a camera transform in `apply()`. GSAP tweens
 the rig; nothing tweens the camera. It also owns the scene parameters the render
 loop reads: `spinScale`, `cloudOpacity`, `veil`, `regionVisibility`,
-`coronaScale`, `orbitLineFade`, and `punch`.
+`coronaScale`, `orbitLineFade`, `punch`, and the two map states `atlasA` / `atlasB`
+(`{ u, v, zoom, opacity }`).
+
+The map states are not camera transforms. `src/atlas.js` reads them and writes only
+texture `offset`/`repeat` on camera-attached planes, so the rig contract in §6 still
+holds with the map on screen.
 
 `WIDE` (top of the file) is the canonical solar-system framing and `REGION_EL`
 shifts the regional shot.
@@ -229,8 +251,9 @@ phi   = (90 - lat) * DEG     // polar angle from +Y
 theta = (lon + 180) * DEG    // azimuth around Y
 ```
 
-The Bay of Bengal is `lat 16.5`, `lon 89.0`. `config.js` also defines the cap angle,
-shell scale, beam dimensions, and particle budget for its marker.
+The Bay of Bengal / Cox's Bazar region is `lat 21.43`, `lon 91.97`. `config.js` also
+defines the cap angle, shell scale, beam dimensions, and particle budget for its
+marker.
 
 Because Earth is tilted (`EARTH.axisTiltDeg`), framing code often needs
 *tilt-aware* queries (`getRegionAzElTilt`, `getLocalSunDirectionTilt`) instead of
@@ -276,7 +299,7 @@ Overlay elements in `index.html`, back to front:
 #panel            category picker / "Explore a place"
 #selection-note   immediate feedback after a choice
 #anchor           projected hotspot label
-#destination      region card (Listen disabled in Phase 1)
+#destination      region card (Listen disabled in Phase 2 alpha)
 #backbar          return control
 #hint             transient messages
 #loader           progress + entry gate
@@ -290,9 +313,11 @@ during a drag.
 
 ## 11. Assets
 
-`AssetLoader` declares three groups: Earth maps, body maps, and the backdrop map.
-The backdrop group is `smoke.png`, the cloud sprite the nebula sky is painted from.
-Progress is reported as a ratio and mapped by the App onto the loader bar.
+`AssetLoader` declares four groups: Earth maps, body maps, the backdrop map, and the
+atlas maps. The backdrop group is `smoke.png`, the cloud sprite the nebula sky is
+painted from. The atlas group is derived from `ATLAS.levels` in `config.js`, so
+adding a map level there is enough to get it loaded. Progress is reported as a ratio
+and mapped by the App onto the loader bar.
 
 Three textures are intentionally unreferenced: `galaxy.jpg` and `galaxy.webp`
 (earlier galaxy backdrops, replaced by the baked nebula) and `moon.jpg` (no Moon
@@ -328,6 +353,8 @@ Where to make common changes:
 | Goal | Change |
 | --- | --- |
 | Retune framing or timing | `src/config.js` (`TIMELINE`, `WIDE`, `REGION_EL`) |
+| Reframe a map level | `src/config.js` (`ATLAS.levels.<key>.start/end`) |
+| Add a map level | `ATLAS.levels` entry + image in `assets/textures/`; `assets.js` loads it automatically |
 | Add a planet | `PLANETS` entry + texture in `assets/textures/` + `BODY_MAPS` in `assets.js` |
 | Add a region | `REGION` config plus a per-region lookup; the marker currently assumes one |
 | Adjust UI copy or layout | `index.html` for structure, `styles.css` for appearance, `ui.js` for behaviour |
@@ -339,6 +366,9 @@ Where to make common changes:
 ## 14. Known limitations
 
 - One hard-coded region; no data model for multiple regions.
+- The flat map has two fixed plates with hand-tuned windows; there is no
+  georeferencing, tiling, or intermediate scale, so the beach hand-off is a
+  cross-fade rather than a continuous zoom.
 - No persistence, no URL state, no deep links.
 - No automated tests, linter, or CI.
 - No error boundary beyond the startup `catch` that rewrites the loader subtitle.

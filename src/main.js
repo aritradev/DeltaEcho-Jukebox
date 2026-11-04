@@ -7,6 +7,7 @@ import { Starfield } from './starfield.js';
 import { SolarSystem } from './solar-system.js';
 import { Earth } from './earth.js';
 import { RegionMarker } from './region.js';
+import { Atlas } from './atlas.js';
 import { CameraDirector } from './camera-director.js';
 import { ExplorerControls } from './controls.js';
 import { UI } from './ui.js';
@@ -15,7 +16,7 @@ const MODE = {
   SOLAR: 'solar',
   EXPLORE: 'explore',
   FLYING: 'flying',
-  REGION: 'region'
+  ATLAS: 'atlas'
 };
 
 class App {
@@ -123,6 +124,9 @@ class App {
     this.controls = new ExplorerControls(this.camera, this.canvas, this.director);
     this.controls.onUserIntent = () => this.onUserIntent();
 
+    this.atlas = new Atlas(this.camera, this.textures);
+    this.camera.add(this.atlas.group);
+
     this.director.apply();
     this.ui.setReadoutState(`01 \u00b7 ${STATES.SOLAR_SYSTEM.name}`);
   }
@@ -179,11 +183,13 @@ class App {
   }
 
   onFlightComplete() {
-    this.mode = MODE.REGION;
+    this.mode = MODE.ATLAS;
+    this.hotspotArmed = false;
+    this.region.setHover(0);
+    this.ui.setAnchor(0, 0, false);
     this.ui.hideSelectionNote();
     this.ui.showDestination();
-    this.ui.showHint('Region available \u00b7 listening arrives in a later phase', 6.5);
-    this.hotspotArmed = true;
+    this.ui.showHint("Cox's Bazar \u00b7 listening arrives in a later phase", 6.5);
   }
 
   onBack() {
@@ -194,8 +200,10 @@ class App {
     this.ui.hideDestination(0.8);
     this.ui.hideSelectionNote();
     this.ui.setPanelEnabled(false);
-    this.director.returnToSolarSystem(() => {
+    this.ui.setAnchor(0, 0, false);
+    this.director.exitAtlas(() => {
       this.mode = MODE.SOLAR;
+      this.controls.setEnabled(true);
       this.ui.setActiveCategory(null);
       this.ui.showPanel(1.4);
       this.ui.setPanelEnabled(true);
@@ -221,7 +229,14 @@ class App {
       this.hotspotArmed = false;
       this.ui.hidePanel(1.4);
     }
-    if (state === STATES.REGION_HOTSPOT) this.region.triggerPulse(0.9);
+    if (state === STATES.CONTINENT) {
+      // From here on the camera is inside a flat map: dragging and zooming have
+      // nothing to act on, so input stays inert until Back.
+      this.hotspotArmed = false;
+      this.region.setHover(0);
+      this.ui.setAnchor(0, 0, false);
+      this.controls.setEnabled(false);
+    }
   }
 
   onPointerMove(event) {
@@ -230,12 +245,13 @@ class App {
       -(event.clientY / window.innerHeight) * 2 + 1
     );
     this.pointerInside = true;
-    document.body.classList.toggle('grab', this.mode !== MODE.FLYING && !this.hoveringHotspot);
+    const grabbable = this.mode === MODE.SOLAR || this.mode === MODE.EXPLORE;
+    document.body.classList.toggle('grab', grabbable && !this.hoveringHotspot);
   }
 
   onKey(event) {
     if (!this.started) return;
-    if (event.key === 'Escape' && (this.mode === MODE.REGION || this.mode === MODE.EXPLORE)) {
+    if (event.key === 'Escape' && (this.mode === MODE.ATLAS || this.mode === MODE.EXPLORE)) {
       this.onBack();
     }
   }
@@ -263,26 +279,18 @@ class App {
       { punch: 0 },
       { punch: 1, duration: 0.5, ease: 'power2.out', yoyo: true, repeat: 1 }
     );
-    if (this.mode === MODE.REGION) {
-      gsap.to(this.director.rig, {
-        dist: 1.15,
-        duration: 1.5,
-        ease: 'power2.out',
-        onComplete: () => {
-          gsap.to(this.director.rig, { dist: 1.25, duration: 2.6, ease: 'power2.inOut' });
-        }
-      });
-    } else {
-      this.mode = MODE.FLYING;
-      this.ui.setPanelEnabled(false);
-      this.ui.hideSelectionNote();
-      this.ui.hidePanel(1.1);
-      this.director.continueToRegion(() => {
-        this.mode = MODE.REGION;
-        this.hotspotArmed = true;
-        this.ui.showDestination();
-      });
+    if (this.mode === MODE.ATLAS) {
+      return;
     }
+    this.mode = MODE.FLYING;
+    this.ui.setPanelEnabled(false);
+    this.ui.hideSelectionNote();
+    this.ui.hidePanel(1.1);
+    this.director.continueToRegion(() => {
+      this.mode = MODE.ATLAS;
+      this.hotspotArmed = false;
+      this.ui.showDestination();
+    });
   }
 
   enterExplore() {
@@ -290,10 +298,21 @@ class App {
     this.hotspotArmed = true;
     this.director.enterFreeOrbit({ keepAz: true, dist: 3.5, elDeg: 19, fov: 42, focus: 0.85 });
     this.ui.setPanelEnabled(false);
-    this.ui.showHint('Explore the globe \u00b7 find the Bay of Bengal', 6.5);
+    this.ui.showHint('Explore the globe \u00b7 find Cox\u2019s Bazar', 6.5);
   }
 
   updateHotspot(delta) {
+    if (this.director.atlasVisible) {
+      if (this.hoveringHotspot) {
+        this.hoveringHotspot = false;
+        this.region.setHover(0);
+        document.body.classList.remove('pointing');
+      }
+      this.ui.setAnchor(0, 0, false);
+      this.region.update(delta, this.elapsed, this.camera, 0);
+      return;
+    }
+
     const rigDist = this.director.rig.dist;
     const distanceFactor = smoothstep(9, 4, rigDist);
     const facing = this.region.facingScore(this.camera.position);
@@ -312,7 +331,8 @@ class App {
       this.hoveringHotspot = hovered;
       this.region.setHover(hovered ? 1 : 0);
       document.body.classList.toggle('pointing', hovered);
-      document.body.classList.toggle('grab', !hovered && this.mode !== MODE.FLYING);
+      const grabbable = this.mode === MODE.SOLAR || this.mode === MODE.EXPLORE;
+      document.body.classList.toggle('grab', !hovered && grabbable);
     }
 
     this.region.update(delta, this.elapsed, this.camera, visibility * (0.3 + 0.7 * facingFactor));
@@ -355,6 +375,8 @@ class App {
 
     this.controls.update(delta);
     this.director.apply();
+    this.atlas.sync([this.director.atlasA, this.director.atlasB]);
+    this.atlas.update();
     this.scene.updateMatrixWorld(true);
 
     this.updateHotspot(delta);

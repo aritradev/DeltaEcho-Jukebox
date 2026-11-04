@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { TEXTURE_DIR, PLANETS } from './config.js';
+import { TEXTURE_DIR, PLANETS, ATLAS } from './config.js';
 import { invertImageIntoCanvas, canvasTexture } from './utils.js';
 
 const EARTH_MAPS = [
@@ -12,6 +12,8 @@ const EARTH_MAPS = [
 
 const BACKDROP_MAPS = ['smoke.png'];
 
+const ATLAS_MAPS = Object.values(ATLAS.levels).map((level) => level.map);
+
 const BODY_MAPS = [
   'sun.jpg',
   ...PLANETS.filter((p) => p.key !== 'earth').map((p) => p.map),
@@ -22,7 +24,7 @@ export class AssetLoader {
   constructor(onProgress) {
     this.onProgress = onProgress;
     this.textures = {};
-    this.files = [...BODY_MAPS, ...EARTH_MAPS, ...BACKDROP_MAPS];
+    this.files = [...BODY_MAPS, ...EARTH_MAPS, ...BACKDROP_MAPS, ...ATLAS_MAPS];
     this.loaded = 0;
   }
 

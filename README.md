@@ -1,12 +1,13 @@
 # Earth Information Jukebox
 
-A cinematic, browser-based journey from the Solar System to Earth, then down to a
-single region: the **Bay of Bengal**.
+A cinematic, browser-based journey from the Solar System to Earth, down through the
+clouds to a flat continent map, and finally into a single place: **Cox's Bazar** on
+the Bay of Bengal.
 
-This repository contains **Phase 1**, a visual prototype. There is no audio, no
+This repository contains **Phase 2 alpha**, a visual prototype. There is no audio, no
 external data feed, and no backend. The "Listen" action is intentionally disabled;
-the work here is the camera choreography, the rendered Earth, and the UI that
-frames the eventual listening experience.
+the work here is the camera choreography, the rendered Earth, the map descent, and
+the UI that frames the eventual listening experience.
 
 ---
 
@@ -54,18 +55,19 @@ repository root, rejects traversal outside it, sets content types, and sends
 ├── server.mjs              Zero-dependency static file server (port 5173)
 ├── src/
 │   ├── main.js             App composition, mode/state machine, render loop
-│   ├── config.js           Central tuning: render, planets, region, states, timelines
+│   ├── config.js           Central tuning: render, planets, region, atlas, states, timelines
 │   ├── assets.js           Texture loading with progress reporting
 │   ├── utils.js            Math helpers (clamp, lerp, smoothstep, seeded RNG)
 │   ├── starfield.js        Baked nebula sky and star points
 │   ├── sun.js              Procedural sun surface, corona, and flares
 │   ├── solar-system.js     Planet orbits, Saturn ring, shared sun position
 │   ├── earth.js            Earth surface, night lights, clouds, atmosphere shader
-│   ├── region.js           Bay of Bengal marker, beam, particles, hotspot hit area
+│   ├── region.js           Cox's Bazar marker, beam, particles, hotspot hit area
+│   ├── atlas.js            Flat map stage: camera-attached plates, window math
 │   ├── camera-director.js  Keyframed camera states and transitions
 │   ├── controls.js         Drag-to-rotate and scroll-to-zoom input
 │   └── ui.js               DOM bindings: loader, panel, readout, destination card
-├── assets/textures/        18 texture images (15 currently referenced)
+├── assets/textures/        20 texture images (17 currently referenced)
 └── vendor/
     ├── three.module.js     Three.js r170
     └── gsap/               GSAP 3.12.5 (core, CSSPlugin, ESM index)
@@ -93,30 +95,45 @@ The journey is a fixed sequence defined in `STATES` (`src/config.js`), driven by
 | `solar system` | Wide view of the Sun and eight planets |
 | `earth approach` | Camera closes on Earth |
 | `earth orbit` | Earth fills the frame; clouds and atmosphere strengthen |
-| `region approach` | Descent toward the Bay of Bengal |
+| `region approach` | Descent toward Cox's Bazar |
 | `cloud entry` | Passes through the cloud layer |
-| `region reveal` | Region marker and beam appear |
-| `region hotspot` | Region locks; destination card becomes available |
+| `continent` | Globe hands over to the flat Asia map behind the veil |
+| `country` | Map dives onto Bangladesh |
+| `locality` | Beach plate settles on Cox's Bazar; destination card shown |
 
-User input (drag/scroll) hands control to `ExplorerControls`. Returning via the
-on-screen back button replays the reverse framing.
+The last three stages are a flat-map stage, not a camera move: `src/atlas.js` draws
+two camera-attached plates and animates only their texture windows, so the camera
+keeps a single writer. Drag and scroll are inert once the map appears; Back and
+Escape return to the solar system.
+
+User input (drag/scroll) hands control to `ExplorerControls` while the globe is on
+screen. Returning via the on-screen back button replays the reverse framing.
 
 ### Configuration
 
 Nearly every visual constant lives in `src/config.js`: render settings, sun and
-planet definitions, cloud and atmosphere response curves, the region's
-coordinates, state identifiers, and transition durations. Prefer editing that
-file over scattering magic numbers through modules.
+planet definitions, cloud and atmosphere response curves, the region's coordinates,
+the map levels (`ATLAS.levels`), state identifiers, and transition durations. Prefer
+editing that file over scattering magic numbers through modules.
 
 ---
 
 ## Assets
 
-`assets/textures/` holds 18 images. Fifteen are referenced by
-`src/assets.js` and `src/config.js`.
+`assets/textures/` holds 20 images. Seventeen are referenced by `src/assets.js` and
+`src/config.js`.
 
 `smoke.png` is the cloud sprite that the nebula sky is painted from; the backdrop
 is baked from it once at startup, so no other sky image is needed at runtime.
+
+The map stage uses two plates:
+
+| File | Role |
+| --- | --- |
+| `asia-satellite.jpg` | Continent level (1887×1962), framed and tuned in `ATLAS.levels.asia` |
+| `coxs-bazar.jpg` | Locality level (2504×1936), `ATLAS.levels.coxs` |
+
+Both are `.jpg` so `assets.js` assigns them `SRGBColorSpace`.
 
 Three files are currently unreferenced but intentionally retained:
 
@@ -164,9 +181,12 @@ lives in `docs/`. Agent-facing guidance is in `AGENTS.md`.
 
 ## Status and limitations
 
-- Phase 1 is a visual prototype: no audio playback, no observation data, no
+- Phase 2 alpha is a visual prototype: no audio playback, no observation data, no
   network calls at runtime.
-- A single hard-coded region (Bay of Bengal) is available.
+- A single hard-coded region (Cox's Bazar) is available.
+- The map stage has only two zoom levels, so the final Bangladesh-to-beach hand-off
+  is a cross-fade rather than a continuous dive (see `docs/camera-transitions.md`
+  Q11).
 - No test suite, linter, or CI is configured.
 - No license file is present. Treat the code as all rights reserved until a
   license is chosen.

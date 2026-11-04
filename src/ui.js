@@ -1,5 +1,5 @@
 import { gsap } from '../vendor/gsap/index.js';
-import { CATEGORIES } from './config.js';
+import { CATEGORIES, REGION } from './config.js';
 
 export class UI {
   constructor(handlers) {
@@ -134,7 +134,7 @@ export class UI {
     this.el.noteLine.textContent = category
       ? 'Let\u2019s find somewhere to listen.'
       : 'One region is available in this build.';
-    this.el.noteDest.textContent = 'Destination available \u00b7 Bay of Bengal';
+    this.el.noteDest.textContent = `Destination available \u00b7 ${REGION.label}`;
     gsap.killTweensOf(this.el.note);
     gsap.fromTo(
       this.el.note,

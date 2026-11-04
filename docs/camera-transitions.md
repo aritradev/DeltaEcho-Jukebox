@@ -1,7 +1,7 @@
 # Camera transitions — behavioural contract
 
-This document records the camera behaviour of the **current Phase 1 prototype** and
-separates two things that must not be confused:
+This document records the camera behaviour of the **current Phase 2 alpha
+prototype** and separates two things that must not be confused:
 
 - the **approved cinematic experience and its reliability guarantees** —
   interruption recovery, timeline cleanup, lock restoration, and cancellation of
@@ -9,16 +9,25 @@ separates two things that must not be confused:
 - the **current choreography, timings, and camera targets**, which are a dated
   baseline recorded for regression comparison, not permanent requirements.
 
-Phase 1 is an early, unfinished prototype. The single-region experience and its
-targeting strategy are temporary limitations: the region experience is expected to
-work across many regions and future experiences. See §13.
+Phase 2 alpha is an early, unfinished prototype. The journey now continues past the
+region into a flat map stage, and the single-region experience and its targeting
+strategy remain temporary limitations: the region experience is expected to work
+across many regions and future experiences. See §13.
+
+> **Phase 2 alpha addition.** After cloud entry the camera hands over to a flat
+> map: two camera-attached planes in `src/atlas.js` whose texture windows animate
+> while the camera transform keeps its single writer. The `STATES` sequence has
+> grown from six stages to eight (`CONTINENT`, `COUNTRY`, `LOCALITY` replace
+> `REGION_REVEAL`, `REGION_HOTSPOT`). Everything in §2–§4, §6–§8 still applies
+> unchanged; the atlas plates are scene parameters, not camera transforms.
 
 Scope: `src/camera-director.js`, the camera-related parts of `src/main.js`,
 `src/controls.js`, and the UI state they drive.
 
-> **Baseline.** Values captured at commit `8ab5577` (`docs: add workflow and context
-> architecture guides`) with `src/` unchanged since `e2118e3`. If the code and this
-> document disagree, the code is correct and this document is stale — see §11.
+> **Baseline.** Values captured at the Phase 2 alpha commit (`feat: add a flat
+> continent map stage after cloud entry`). The previous Phase 1 baseline was
+> `8ab5577`. If the code and this document disagree, the code is correct and this
+> document is stale — see §11.
 
 ---
 
@@ -34,7 +43,7 @@ Scope: `src/camera-director.js`, the camera-related parts of `src/main.js`,
 
 Protected surface, in full:
 
-1. The cinematic journey keeps its current shape and character: six ordered stages,
+1. The cinematic journey keeps its current shape and character: eight ordered stages,
    each one actually visited, with the current visual intent.
 2. Interruption recovery: `MODE`, panel, hotspot, hint (§7).
 3. Timeline and lock cleanup (§6, §7).
@@ -176,10 +185,10 @@ them: `introDolly` begins at `dist = WIDE.dist + 4.4 = 15.2`, above the user max
 All durations below are in seconds. "State" is the `STATES` value emitted at that
 timeline position; the readout renders it as `NN · name`.
 
-Everything in this section is the **baseline choreography at `8ab5577`**. It records
-what the prototype currently does so a later change can be compared against it.
-None of these values is a lifetime requirement — §11.2 describes how to change them
-deliberately.
+Everything in this section is the **baseline choreography at the Phase 2 alpha
+commit**. It records what the prototype currently does so a later change can be
+compared against it. None of these values is a lifetime requirement — §11.2
+describes how to change them deliberately.
 
 ### 5.1 `beginFlight` — category selection (full journey)
 
@@ -197,15 +206,21 @@ the 1700 ms panel-hide timer.
 | 14.5 | — | `spinScale → 0.55` (2.475 s), `regionVisibility → 0.14` (2.7 s), `cloudOpacity → 0.92`, `orbitLineFade → 1` (1.6 s) |
 | 19.0 | `05 cloud entry` | `dist → 1.052` and `fov → 53` (`power1.in`), `offX → 0`, `offY → 0.03`, `veil → 0.9` (2.475 s) |
 | 19.0 | — | `cloudOpacity → 1.0` (2.25 s), `regionVisibility → 0.1` (2.25 s) |
-| 23.5 | `06 region reveal` | `veil → 0` (2.79 s), `cloudOpacity → 0.4` (3.6 s), `regionVisibility → 1` (3.375 s), `dist → 1.38`, `fov → 40`, `offX → −0.05`, `offY → 0.075` (4.5 s, `power2.out`) |
-| 28.0 | `07 region hotspot` | `dist → 2.75`, `fov → 41`, `focus → 0.32`, `offX → −0.02`, `offY → 0.03` (2.2 s) |
-| 28.0 | — | `cloudOpacity → 0.46` and `spinScale → 0.55` (2.0 s) |
-| 30.2 | complete | `timeline = null`, `locked = false`, completion callback fires |
+| 23.5 | `06 continent` | `atlasA` opacity → 1 (1.6 s, `power2.out`), `atlasA.zoom → 1.15` (3.2 s, `sine.inOut`), `veil → 0` (2.5 s, `power2.out`), `cloudOpacity → 0.4` (2.24 s). The veil is still up from cloud entry, so the globe→map swap happens underneath it |
+| 26.7 | `07 country` | `atlasA.u → 0.551`, `atlasA.v → 0.733` (4.0 s, `power3.out`); `atlasA.zoom → 9` (4.0 s, `power2.inOut`) |
+| 30.7 | — | Dissolve, no state change: `atlasB` set to `coxs.start` and faded in (1.7 s); `atlasA` fades out (1.36 s) while still zooming to `9 × 1.4`; `veil → 0.34` then back to 0 |
+| 32.4 | `08 locality` | `atlasB` `u/v/zoom → coxs.end` (2.8 s, `power2.out`) |
+| 35.2 | complete | `timeline = null`, `locked = false`, completion callback fires |
 
-**Total: 30.2 s.** Stage boundaries: 2.2 / 9.0 / 14.5 / 19.0 / 23.5 / 28.0.
+**Total: 35.2 s.** Stage boundaries: 2.2 / 9.0 / 14.5 / 19.0 / 23.5 / 26.7 / 32.4.
 
-**Verified** — The `settle` window is `max(TIMELINE.lock, 2.2) = 2.2`, so the
-hotspot state is emitted at 28.0 and the shot finishes settling at 30.2.
+**Verified** — There is no `settle` floor any more. `buildRegionSequence()` returns
+`t + TIMELINE.locality`, so the timeline ends exactly on the final atlas tween and the
+completion callback fires at 35.2 s.
+
+**Verified** — `CONTINENT` is also where input is switched off (`main.onStateChange`
+calls `controls.setEnabled(false)`). The camera is inside a flat map from this point
+on, so drag and wheel have nothing to act on until Back.
 
 ### 5.2 `continueToRegion` — hotspot click from free orbit
 
@@ -215,26 +230,35 @@ Same region sequence as 5.1 from its 14.5 s mark, starting at 0.
 | --- | --- |
 | 0 | `04 region approach` |
 | 4.5 | `05 cloud entry` |
-| 9.0 | `06 region reveal` |
-| 13.5 | `07 region hotspot` |
-| 15.7 | complete |
+| 9.0 | `06 continent` |
+| 12.2 | `07 country` |
+| 17.9 | `08 locality` |
+| 20.7 | complete |
 
-Targets are identical to 5.1. The two scene-parameter tweens inside the settle
-(`cloudOpacity`, `spinScale`) use `lock = 0.9` instead of 2.0, so they finish
-earlier, but the `settle` floor keeps the total at 15.7 s. See Q1.
+Targets are identical to 5.1. `buildRegionSequence()` no longer takes a `shortened`
+flag, so this path is simply the tail of the full flight with no timing differences.
 
 ### 5.3 `returnToSolarSystem` — Back button
 
+Reached either directly, or through `exitAtlas()` when a map plate is on screen.
+
+`exitAtlas()` first fades both atlas plates out over 0.5 s while raising the veil to
+1, then resets `atlasA`/`atlasB` to their start values and calls
+`returnToSolarSystem()`. When no plate is visible it forwards straight to
+`returnToSolarSystem()`, so callers do not need to know the current mode. Back from
+the map therefore takes 0.5 + 11.1 = **11.6 s**; from anywhere else, 11.1 s.
+
 | At | State | Changes |
 | --- | --- | --- |
-| 0 | `06 region reveal` | `regionVisibility → 0` (1.8 s), `veil → 0` (1.2 s), `cloudOpacity → 0.72` (2.2 s), `spinScale → 0.55` (2 s), `dist → 2.6`, `fov → 44`, `offX → 0`, `offY → 0.023` (3.2 s) |
+| 0 | `06 continent` | `atlasA`/`atlasB` `opacity → 0` (0.9 s), `regionVisibility → 0` (1.8 s), `veil → 0` (1.2 s), `cloudOpacity → 0.72` (2.2 s), `spinScale → 0.55` (2 s), `dist → 2.6`, `fov → 44`, `offX → 0`, `offY → 0.023` (3.2 s) |
 | 2.6 | `02 earth approach` | `dist → 5.2`, `fov → 46`, `focus → 0.45` (4.4 s); `el → 12°`, `az → wideAz` (4.4 s); `cloudOpacity → 0.3`; `orbitLineFade → 0`, `coronaScale → 1` |
 | 5.4 | — | Final tween to `WIDE`: `dist 10.8`, `fov 56`, `focus 0`, `offX −0.278`, `offY 0`, `el 15°`, `az wideAz` (5.6 s, ends 11.0) |
 | 6.4 | `01 solar system` | Readout switches before the camera finishes arriving |
 | 11.0 | — | 0.1 s padding tween |
 | 11.1 | complete | `timeline = null`, `locked = false`, `setState(SOLAR_SYSTEM)`, callback |
 
-**Total: 11.1 s.** The readout therefore goes `07 → 06 → 02 → 01`.
+**Total: 11.1 s.** The readout therefore goes `08 → 06 → 02 → 01` from the map, and
+`06 → 02 → 01` from elsewhere.
 
 **Verified** — This is a reverse *framing*, not a reversed timeline: stages are
 authored forward at absolute positions.
@@ -280,12 +304,13 @@ Ease `power2.out`. `az`, `el`, and `focus` are untouched.
 Default duration 0.9 s, called bare by `interrupt()`.
 
 ```text
-orbitLineFade    → 0
-regionVisibility → 0
-coronaScale      → 1
-veil             → 0
-cloudOpacity     → CLOUDS.opacity.solarRest (0.3)
-spinScale        → 0.55
+orbitLineFade       → 0
+regionVisibility    → 0
+coronaScale         → 1
+veil                → 0
+cloudOpacity        → CLOUDS.opacity.solarRest (0.3)
+spinScale           → 0.55
+atlasA/atlasB.opacity → 0
 ```
 
 **MUST** — Interrupt recovery must not move the camera to a "recovered" pose: the
@@ -296,9 +321,10 @@ user's grabbed viewpoint is preserved. In the current prototype this is achieved
 
 | Path | Duration |
 | --- | --- |
-| `beginFlight` | 30.2 s |
-| `continueToRegion` | 15.7 s |
+| `beginFlight` | 35.2 s |
+| `continueToRegion` | 20.7 s |
 | `returnToSolarSystem` | 11.1 s |
+| Back via `exitAtlas` (plate visible) | 11.6 s |
 | `enterFreeOrbit` | 3.4 s |
 | `introDolly` | 5.2 s |
 | `restoreSolarState` | 0.9 s |
@@ -315,7 +341,7 @@ accumulated in the builder:
 ```js
 let t = t0 + T.approach;
 ...
-this.buildRegionSequence(tl, t + T.orbit, false);
+this.buildRegionSequence(tl, t + T.orbit);
 ```
 
 State changes are zero-duration calls placed at the same positions:
@@ -326,7 +352,11 @@ scheduleState(tl, state, time)  →  tl.call(() => this.setState(state), null, t
 
 `setState()` returns early if the state is unchanged, otherwise fires
 `onStateChange`, which updates the readout and performs entry effects (panel hide
-on `EARTH_APPROACH`, marker pulse on `REGION_HOTSPOT`).
+on `EARTH_APPROACH`, input shutdown and anchor hiding on `CONTINENT`).
+
+The atlas tweens are the exception to "camera only": they animate `atlasA`/`atlasB`,
+plain state objects owned by the director. `src/atlas.js` reads them each frame and
+writes only texture `offset`/`repeat` and mesh visibility — never a camera transform.
 
 ### 6.2 Timelines are built synchronously — **Verified**
 
@@ -352,6 +382,12 @@ observes an unlocked director.
 **MUST NOT** — Invoke a completion callback after the timeline has been killed, or
 after an interruption has taken ownership of recovery.
 
+`exitAtlas()` is not a timeline of its own: it fades the plates over 0.5 s and then
+delegates to `returnToSolarSystem()`, so the ordering above applies to the delegated
+return. The 0.5 s fade is the only window in which a scripted transition is running
+with `locked === false`; `MODE` is already `FLYING` and controls are already
+disabled, so no input can reach a tween.
+
 ### 6.4 Lock lifecycle — **Verified**
 
 | Method | Sets `locked` |
@@ -359,6 +395,7 @@ after an interruption has taken ownership of recovery.
 | `beginFlight` | `true` |
 | `continueToRegion` | `true` |
 | `returnToSolarSystem` | `true` |
+| `exitAtlas` | unchanged (delegates to `returnToSolarSystem`) |
 | `enterFreeOrbit` | `false` |
 | timeline `onComplete` | `false` |
 | `killTimeline` / `interrupt` | `false` (via `interrupt`) |
@@ -374,6 +411,8 @@ timeline = null
 pendingComplete = null
 gsap.killTweensOf(rig)
 gsap.killTweensOf(this)      // also kills the punch tween
+gsap.killTweensOf(atlasA)
+gsap.killTweensOf(atlasB)
 ```
 
 **MUST** — Clear `pendingComplete` before or during the kill, so a cancelled
@@ -398,8 +437,13 @@ pointer drag / wheel / pinch
   → recovery
 ```
 
-Controls are **enabled for the whole session** after `onEnter()`; they are never
-disabled for a flight. The first user intent is therefore what cancels it.
+Controls are **enabled for every camera flight** after `onEnter()`. The single
+exception is the flat-map stage: `onStateChange(CONTINENT)` disables controls for the
+rest of the descent, so from `CONTINENT` onward there is no user intent to interrupt
+with. Before that point, the first user intent is what cancels a flight.
+
+**Verified** — `main.onBack()` re-enables controls in the completion callback of
+`director.exitAtlas()`, so the disabled window ends exactly when the map is gone.
 
 ### 7.2 Preconditions
 
@@ -446,9 +490,15 @@ user's current viewpoint. In the current prototype this is achieved by
 `restoreSolarState()` touching scene parameters only.
 
 **MUST NOT** — Break Escape or Back semantics during `FLYING`:
-- `Escape` acts only in `MODE.REGION` and `MODE.EXPLORE`; during `FLYING` it does
+- `Escape` acts only in `MODE.ATLAS` and `MODE.EXPLORE`; during `FLYING` it does
   nothing.
 - The back button handler returns immediately when `MODE === FLYING`.
+
+**MUST** — Keep the flat map inert. `MODE.ATLAS` means a plate is on screen and drag,
+wheel, and pinch do nothing. Controls are re-enabled only by the callback that runs
+after the plates have faded out, never while one is still visible. This is an
+intentional input carve-out for the map stage, not an interruption guarantee: it
+narrows when the user can interrupt, and must not be used to bypass §7.3–§7.4.
 
 **MUST** — Keep these guarantees when region targeting changes. The current
 single-region precomputed azimuth (Q4) is a prototype limitation, not part of the
@@ -462,10 +512,10 @@ rotating and while more than one region can be addressed. See §13.
 | Interrupt during the 2.2 s hold | Mode `SOLAR` (`dist` still 10.8); panel restored — except the Q2 timer race | Verified / Q2 runtime-pending |
 | Interrupt early in approach | Mode `SOLAR` (`dist > 6`) | Verified |
 | Interrupt late in approach | Mode `EXPLORE` (`dist < 6`), hotspot armed | Verified |
-| Interrupt during cloud entry / reveal | Mode `EXPLORE`; veil and region visibility fade to 0 | Verified |
+| Interrupt during cloud entry | Mode `EXPLORE`; veil fades to 0, atlas never appears | Verified |
 | Interrupt during `returnToSolarSystem` | `interrupt()` succeeds; the return timeline's own callback never runs, so panel restoration comes from `onUserIntent` | Verified |
-| Interrupt during `introDolly` | Not possible: no timeline, `isFlying === false`; wheel zoom is overwritten by the dolly tween (Q3) | Verified |
-| Interrupt during `enterFreeOrbit` | Not possible: no timeline; mode is `EXPLORE`, so `onUserIntent` returns before calling `interrupt()` | Verified |
+| Drag/wheel during `CONTINENT` → `LOCALITY` | No effect: controls are disabled on the `CONTINENT` state change | Verified |
+| Escape during `ATLAS` | Runs `onBack()` and leaves the map | Verified |
 | `Escape` during `FLYING` | No effect | Verified |
 | Back during `FLYING` | No effect | Verified |
 | Interrupt within 1.7 s of selection | Suspected: stale `hidePanel` timer hides the restored panel (Q2) | Runtime-pending |
@@ -495,18 +545,28 @@ support will likely add per-region state.
 | Parameter | Written by | Read by | Range in these paths |
 | --- | --- | --- | --- |
 | `spinScale` | director tweens | `earth.setSpinRate` | 0.55–0.62 |
-| `cloudOpacity` | director tweens | `earth.setCloudOpacity` | 0.3 → 1.0 → 0.46 |
-| `regionVisibility` | director tweens | `main.updateHotspot` | 0 → 0.14 → 1 |
-| `veil` | director tweens | `ui.setVeil` | 0 → 0.9 → 0 |
+| `cloudOpacity` | director tweens | `earth.setCloudOpacity` | 0.3 → 1.0 → 0.4 |
+| `regionVisibility` | director tweens | `main.updateHotspot` | 0 → 0.14 → 0.1 |
+| `veil` | director tweens | `ui.setVeil` | 0 → 0.9 → 0 → 0.34 → 0 |
 | `coronaScale` | director tweens | `solar.setCorona` | 1 → 0.85 → 1 |
 | `orbitLineFade` | director tweens | `solar.setOrbitLines` | 0 → 1 → 0 |
 | `punch` | `main.onHotspotClick` | `main.updateHotspot` | 0 → 1 → 0 |
+| `atlasA` / `atlasB` | director tweens | `src/atlas.js` | `{u, v, zoom, opacity}`, opacity 0 → 1 → 0 |
+
+`atlasA` maps `asia-satellite.jpg`, `atlasB` maps `coxs-bazar.jpg`. Both are plain
+objects owned by the director; `Atlas.update()` converts them into texture
+`offset`/`repeat` each frame. `ATLAS.levels` in `src/config.js` holds their tuned
+`start`/`end` values.
 
 **MUST NOT** — Leave a visible region marker while `MODE` is `SOLAR` after recovery.
 In the current prototype this is guaranteed by `restoreSolarState()` driving
 `regionVisibility` to 0 over 0.9 s. The single scalar is a prototype choice, not a
 permanent model: if multi-region work tracks visibility per region, the same
 requirement applies to each region.
+
+**MUST NOT** — Leave a map plate visible in any mode. `main.updateHotspot()` bails
+out while `director.atlasVisible`, and `restoreSolarState()` fades both plates to 0,
+so an interrupted flight can never strand a plate over a live Earth view.
 
 ---
 
@@ -531,14 +591,17 @@ machines; the ordering and ratios are what matter.
 | 9.0 | `03 · earth orbit` | Earth fills frame; orbit lines fading |
 | 14.5 | `04 · region approach` | Descent accelerates into the globe |
 | 19.0 | `05 · cloud entry` | Veil near peak, clouds dense |
-| 23.5 | `06 · region reveal` | Veil clears, marker fades in |
-| 28.0 | `07 · region hotspot` | Pull-back begins, destination card appears |
-| 30.2 | `07 · region hotspot` | Motion settled |
+| 23.5 | `06 · continent` | Veil lifts onto the flat Asia map; drag and wheel stop responding |
+| 26.7 | `07 · country` | Dive onto Bangladesh, destination card appears |
+| 32.4 | `08 · locality` | Beach plate settles |
+| 35.2 | `08 · locality` | Motion settled |
 
-Hotspot click from free orbit: `04` at 0, `05` at 4.5, `06` at 9.0, `07` at 13.5,
-settled at 15.7.
+Hotspot click from free orbit: `04` at 0, `05` at 4.5, `06` at 9.0, `07` at 12.2,
+`08` at 17.9, settled at 20.7.
 
-Back button: `06` at 0, `02` at 2.6, `01` at 6.4, settled at 11.1.
+Back button from the map: `06` at 0, `02` at 3.1, `01` at 6.9, settled at 11.6
+(the 0.5 s plate fade precedes the return). From elsewhere: `06` at 0, `02` at 2.6,
+`01` at 6.4, settled at 11.1.
 
 ### 9.2 Interruption matrix
 
@@ -550,19 +613,22 @@ Reload the page between destructive tests to return to the baseline.
 | I2 | Drag ~3 s after selection | Mode `SOLAR`; panel returns; `dist > 6` |
 | I3 | Drag ~8.5 s after selection | Mode `EXPLORE`; hotspot armed |
 | I4 | Wheel during cloud entry (~20 s) | Mode `EXPLORE`; veil fades out; region marker fades |
-| I5 | Drag during reveal (~25 s) | Mode `EXPLORE`; no destination card appears |
+| I5 | Drag/wheel after `06 · continent` appears (~24 s) | No effect at all — controls are disabled; the flight continues to the map |
 | I6 | Wheel ~3 s into the Back transition | Manual control restored; panel returns; readout is not `01`; no stuck state |
 | I7 | Press Escape during any flight | Nothing happens |
 | I8 | Click Back during any flight | Nothing happens |
-| I9 | After any interruption, inspect `__jukebox.director` | `isFlying === false`, `locked === false`, `rig.dist` unchanged by recovery |
-| I10 | After I3/I4, click the hotspot | Flight continues to the region; destination card appears at the end |
+| I9 | Press Escape on the finished map | Leaves the map and returns to the solar system |
+| I10 | After any interruption, inspect `__jukebox.director` | `isFlying === false`, `locked === false`, `rig.dist` unchanged by recovery |
+| I11 | After I3/I4, click the hotspot | Flight continues to the map; destination card appears at the end |
 
 Probe available in the console (exposed by `main.js`):
 
 ```js
-__jukebox.mode                    // 'solar' | 'explore' | 'flying' | 'region'
+__jukebox.mode                    // 'solar' | 'explore' | 'flying' | 'atlas'
 __jukebox.director.isFlying       // false after a successful interrupt
 __jukebox.director.locked
+__jukebox.director.atlasVisible   // true while a map plate is on screen
+__jukebox.director.atlasA         // { u, v, zoom, opacity }
 __jukebox.director.rig            // { dist, az, el, fov, focus, offX, offY }
 ```
 
@@ -572,27 +638,27 @@ Minimum evidence required after any change to protected behaviour **or** to the
 baseline choreography:
 
 1. §9.1 checkpoints in order, with no readout skip or repeat.
-2. I2, I3, I4, I6, I7, I8, I9 pass.
+2. I2, I3, I4, I5, I6, I7, I8, I9, I10 pass.
 3. The destination card appears only after successful completion, never after an
    interruption.
 4. `git diff` shows no change outside the intended files.
 
 ---
 
-## 10. Observations on the current prototype (Q1–Q10)
+## 10. Observations on the current prototype (Q1–Q11)
 
 None of these is a requirement, and none may be promoted to one without a separate
-decision. They describe the Phase 1 prototype as it stands at `8ab5577`, so that
-(a) nobody mistakes a temporary limitation for intended design, and (b) future work
-starts from an accurate description.
+decision. They describe the current prototype so that (a) nobody mistakes a
+temporary limitation for intended design, and (b) future work starts from an
+accurate description.
 
 Status vocabulary:
 
-- **Confirmed source fact** — statically true in the current code (Q1, Q3, Q5, Q6,
-  Q9, Q10).
+- **Confirmed source fact** — statically true in the current code (Q2, Q3, Q5, Q6,
+  Q9, Q10, Q11).
 - **Suspected defect** — statically reachable but not yet exercised in a browser
-  (Q2, Q4, Q7, Q8). Runtime validation is required before treating one as either a
-  bug or acceptable behaviour.
+  (Q4, Q7, Q8). Runtime validation is required before treating one as either a bug
+  or acceptable behaviour.
 
 Fixing any of them is normal prototype work: it needs review, and the §9.3
 regression set if protected behaviour is touched. It does not require preserving the
@@ -600,7 +666,7 @@ current approach.
 
 | ID | Finding | Evidence | Status |
 | --- | --- | --- | --- |
-| Q1 | `shortened` is effectively dead. `approach`, `cloud`, and `reveal` are assigned the same values in both branches; only `lock` differs (2.0 vs 0.9), and the `settle = max(lock, 2.2)` floor cancels that difference. The hotspot flight is therefore the same 15.7 s as the full flight's region half | `camera-director.js → buildRegionSequence` | Confirmed source fact |
+| Q1 | *Resolved in Phase 2 alpha.* The `shortened` flag and the `settle` floor are gone; `buildRegionSequence()` is now the single region tail used by both entry paths, and its duration is exactly the sum of `continent + country + dissolve + locality` | `camera-director.js → buildRegionSequence` | Resolved |
 | Q2 | **Early-interrupt panel race.** `onSelect()` schedules `hidePanel(1.6)` at 1700 ms and never clears it. An interrupt before 1.7 s calls `showPanel()`, then the stale timer fades the panel out again. Because `.panel-inner` keeps `pointer-events: auto`, the invisible panel may remain clickable | `main.js` 1700 ms timer; `ui.js → hidePanel`; `styles.css .panel-inner` | **Suspected defect — runtime validation required** |
 | Q3 | **Unguarded camera tweens vs. manual input.** `introDolly` writes `dist`/`fov`/`offX`/`offY` for 5.2 s with no input guard, so wheel zoom during it is overwritten each frame; it also starts at `dist = 15.2`, above the user maximum of 15. `enterFreeOrbit` similarly tweens `el` for 3.4 s and can fight a drag | `camera-director.js` introDolly/enterFreeOrbit; `controls.js` clamps | Confirmed source fact |
 | Q4 | **Stale region target.** `buildRegionSequence()` runs synchronously at click time and captures `regionAzTilt`/`regionElTilt`. Earth keeps spinning at `spinScale ≈ 0.55` for the next 14.5 s, so the target azimuth is sampled before the descent begins | `camera-director.js` construction order; `earth.getRegionAzElTilt()` | **Suspected defect — visual impact not measured** |
@@ -610,6 +676,7 @@ current approach.
 | Q8 | **Invisible hotspot after interrupting a return.** When a return is interrupted with `dist < 6`, `hotspotArmed` becomes `true` while `regionVisibility` tweens to 0, leaving a hittable marker that is fading or invisible | `main.onUserIntent`; `restoreSolarState`; `main.updateHotspot` | **Suspected defect — runtime validation required** |
 | Q9 | **Overlapping return tweens.** The stage-2 tween runs 2.6–7.0 s and the final tween starts at 5.4 s; both target `dist`, `fov`, `focus`, `el`, and `az` on the same object for 1.6 s. GSAP resolves the conflict by render order, so the outcome is not explicit in the code | `camera-director.js` 2.6 s and 5.4 s blocks | Confirmed source fact; runtime effect unmeasured |
 | Q10 | `director.onComplete` is initialised but never assigned, so `enterFreeOrbit()`'s `if (this.onComplete)` branch is dead | `camera-director.js:47`; no assignment in `src/` | Confirmed source fact |
+| Q11 | **The map has only two scales, so the beach hand-off is not a true continuous zoom.** At `asia.end.zoom = 9` the 1887×1962 plate shows a ~120 px tall window stretched to the frame (~8× upscale, and ~11× by the end of the dissolve), while `coxs-bazar.jpg` at `zoom 1.15` is close to 1:1. The 1.7 s cross-fade hides the cut but not the scale ratio, so the arrival can read as a fall rather than a dive. A third intermediate plate is the real fix | `ATLAS.levels` in `config.js`; `src/atlas.js → update()` window math | Confirmed source fact; visual severity unmeasured across viewports |
 
 ---
 
@@ -657,19 +724,20 @@ intended-but-absent behaviour.
 
 | Item | Value |
 | --- | --- |
-| Applies to | Phase 1 prototype, single region, at the baseline commit |
-| Baseline commit | `8ab5577` |
-| Files verified | `src/camera-director.js`, `src/main.js`, `src/controls.js`, `src/earth.js`, `src/ui.js`, `src/config.js`, `styles.css` |
-| Method | Direct source reading; no runtime instrumentation performed as part of writing this document |
-| Runtime-confirmed items | None — every "Verified" label above is static source verification, not browser observation |
+| Applies to | Phase 2 alpha prototype, single region, at the baseline commit |
+| Baseline commit | Phase 2 alpha (`feat: add a flat continent map stage after cloud entry`) |
+| Previous baseline | `8ab5577` (Phase 1) |
+| Files verified | `src/camera-director.js`, `src/atlas.js`, `src/main.js`, `src/controls.js`, `src/earth.js`, `src/ui.js`, `src/config.js`, `styles.css` |
+| Method | Direct source reading, plus a headless-Chrome scrub of the real timeline (`src/atlas.js` window math, state order, Back path) at 1600×900 and 760×1000 |
+| Runtime-confirmed items | Atlas framing, zoom, and dissolve; state order `05 → 06 → 07 → 08`; Back via `exitAtlas`; zero console errors in both aspects |
 
 ---
 
 ## 13. Prototype scope and future extensibility
 
-Phase 1 is not final or fully polished. The camera system currently serves **one**
-region, and several choices reflect that. Recording them as baseline does not make
-them permanent.
+Phase 2 alpha is not final or fully polished. The camera system currently serves
+**one** region, and several choices reflect that. Recording them as baseline does not
+make them permanent.
 
 | Current choice | Status | Why it is expected to change |
 | --- | --- | --- |
@@ -678,6 +746,8 @@ them permanent.
 | Fixed `focus` / `offX` / `offY` framing values | Temporary | Framing must adapt per region and per aspect |
 | `regionVisibility` as one scalar | Temporary | Several regions may be visible or fading together |
 | A single `REGION_EL` elevation offset | Temporary | Elevation must be derived per region |
+| Two hard-coded atlas plates with hand-tuned `u`/`v`/`zoom` | Temporary | A real map stage needs georeferencing and more zoom levels (Q11) |
+| Atlas plates attached to the camera with no depth | Temporary | A production map stage may need a different projection or a tile pyramid |
 | Exact durations in §5 | Baseline | Cinematic timing is a design decision, revisitable through §11.2 |
 
 What must survive multi-region work:
@@ -687,8 +757,10 @@ What must survive multi-region work:
 - `locked` restoration, and the guarantee that `MODE` never sticks in `FLYING`.
 - Escape and Back staying inert during `FLYING`.
 - No completion callback firing after an interruption.
+- The flat map staying inert while visible, and leaving only through a path that
+  re-enables controls when the plate is gone.
 
-What need not survive: everything in the table above, plus Q1–Q10, which may be
+What need not survive: everything in the table above, plus Q1–Q11, which may be
 fixed or redesigned as the prototype matures.
 
 This section is descriptive. It does not implement or require any specific
