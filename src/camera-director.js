@@ -15,6 +15,16 @@ const WIDE = {
 
 const REGION_EL = 3.2 * DEG;
 
+// One global multiplier keeps every transition in sync. Base durations live in
+// `TIMELINE`; `scaled()` converts them to runtime seconds.
+const SPEED = TIMELINE.speed || 1;
+const scaled = (seconds) => seconds / SPEED;
+const T = Object.fromEntries(
+  Object.entries(TIMELINE)
+    .filter(([key]) => key !== 'speed')
+    .map(([key, value]) => [key, value / SPEED])
+);
+
 export class CameraDirector {
   constructor(camera, earth, region) {
     this.camera = camera;
@@ -105,6 +115,7 @@ export class CameraDirector {
   }
 
   introDolly(duration) {
+    const seconds = scaled(duration);
     return gsap.fromTo(
       this.rig,
       {
@@ -118,7 +129,7 @@ export class CameraDirector {
         fov: WIDE.fov,
         offX: WIDE.offX,
         offY: WIDE.offY,
-        duration,
+        duration: seconds,
         ease: 'power2.out'
       }
     );
@@ -166,7 +177,6 @@ export class CameraDirector {
 
   buildRegionSequence(tl, time) {
     const rig = this.rig;
-    const T = TIMELINE;
     this.refreshRegionTilt();
     const alignAz = this.nearestAligned(rig.az, this.regionAzTilt);
     const approach = T.regionApproach;
@@ -182,7 +192,7 @@ export class CameraDirector {
     tl.to(this, { spinScale: 0.55, duration: approach * 0.55, ease: 'power2.out' }, time);
     tl.to(this, { regionVisibility: 0.14, duration: approach * 0.6, ease: 'power1.in' }, time);
     tl.to(this, { cloudOpacity: CLOUDS.opacity.regionApproach, duration: approach, ease: 'power1.inOut' }, time);
-    tl.to(this, { orbitLineFade: 1, duration: 1.6 }, time);
+    tl.to(this, { orbitLineFade: 1, duration: scaled(1.6) }, time);
 
     let t = time + approach;
     this.scheduleState(tl, STATES.CLOUD_ENTRY, t);
@@ -239,7 +249,6 @@ export class CameraDirector {
     this.pendingComplete = onComplete || null;
 
     const rig = this.rig;
-    const T = TIMELINE;
     this.refreshRegionTilt();
     const startAz = rig.az;
     const orbitAz = this.nearestAligned(startAz, this.regionAzTilt + 0.3);
@@ -339,7 +348,7 @@ export class CameraDirector {
     this.veil = 0.85;
     return gsap.to(this, {
       veil: 0,
-      duration: 0.7,
+      duration: scaled(0.7),
       ease: 'power2.out',
       onComplete: () => {
         if (onComplete) onComplete();
@@ -351,7 +360,7 @@ export class CameraDirector {
     this.killTimeline();
     this.locked = false;
     const rig = this.rig;
-    const duration = options.duration ?? 3.4;
+    const duration = scaled(options.duration ?? 3.4);
     this.refreshRegionTilt();
     const az = options.keepAz ? rig.az : this.nearestAligned(rig.az, options.az ?? this.regionAzTilt);
 
@@ -396,22 +405,22 @@ export class CameraDirector {
     });
 
     this.scheduleState(tl, STATES.CONTINENT, 0);
-    tl.to([this.atlasA, this.atlasB], { opacity: 0, duration: 0.9, ease: 'power2.in' }, 0);
-    tl.to(this, { regionVisibility: 0, duration: 1.8, ease: 'power2.in' }, 0);
-    tl.to(this, { veil: 0, duration: 1.2 }, 0);
-    tl.to(this, { cloudOpacity: CLOUDS.opacity.returnReveal, duration: 2.2, ease: 'power1.inOut' }, 0);
-    tl.to(this, { spinScale: 0.55, duration: 2, ease: 'power2.out' }, 0);
-    tl.to(rig, { dist: 2.6, fov: 44, offX: 0, offY: 0.023, duration: 3.2, ease: 'power2.inOut' }, 0);
+    tl.to([this.atlasA, this.atlasB], { opacity: 0, duration: scaled(0.9), ease: 'power2.in' }, 0);
+    tl.to(this, { regionVisibility: 0, duration: scaled(1.8), ease: 'power2.in' }, 0);
+    tl.to(this, { veil: 0, duration: scaled(1.2) }, 0);
+    tl.to(this, { cloudOpacity: CLOUDS.opacity.returnReveal, duration: scaled(2.2), ease: 'power1.inOut' }, 0);
+    tl.to(this, { spinScale: 0.55, duration: scaled(2), ease: 'power2.out' }, 0);
+    tl.to(rig, { dist: 2.6, fov: 44, offX: 0, offY: 0.023, duration: scaled(3.2), ease: 'power2.inOut' }, 0);
 
-    this.scheduleState(tl, STATES.EARTH_APPROACH, 2.6);
-    tl.to(rig, { dist: 5.2, fov: 46, focus: 0.45, duration: 4.4, ease: 'power2.inOut' }, 2.6);
-    tl.to(rig, { el: 12 * DEG, az: wideAz, duration: 4.4, ease: 'power2.inOut' }, 2.6);
-    tl.to(this, { cloudOpacity: CLOUDS.opacity.returnApproach, duration: 4.4, ease: 'power1.out' }, 2.6);
-    tl.to(this, { spinScale: 0.55, duration: 4, ease: 'power2.out' }, 2.6);
-    tl.to(this, { orbitLineFade: 0, duration: 4 }, 2.6);
-    tl.to(this, { coronaScale: 1, duration: 4 }, 2.6);
+    this.scheduleState(tl, STATES.EARTH_APPROACH, scaled(2.6));
+    tl.to(rig, { dist: 5.2, fov: 46, focus: 0.45, duration: scaled(4.4), ease: 'power2.inOut' }, scaled(2.6));
+    tl.to(rig, { el: 12 * DEG, az: wideAz, duration: scaled(4.4), ease: 'power2.inOut' }, scaled(2.6));
+    tl.to(this, { cloudOpacity: CLOUDS.opacity.returnApproach, duration: scaled(4.4), ease: 'power1.out' }, scaled(2.6));
+    tl.to(this, { spinScale: 0.55, duration: scaled(4), ease: 'power2.out' }, scaled(2.6));
+    tl.to(this, { orbitLineFade: 0, duration: scaled(4) }, scaled(2.6));
+    tl.to(this, { coronaScale: 1, duration: scaled(4) }, scaled(2.6));
 
-    this.scheduleState(tl, STATES.SOLAR_SYSTEM, 6.4);
+    this.scheduleState(tl, STATES.SOLAR_SYSTEM, scaled(6.4));
     tl.to(rig, {
       dist: WIDE.dist,
       fov: WIDE.fov,
@@ -420,10 +429,10 @@ export class CameraDirector {
       offY: WIDE.offY,
       el: WIDE.elDeg * DEG,
       az: wideAz,
-      duration: 5.6,
+      duration: scaled(5.6),
       ease: 'power2.inOut'
-    }, 5.4);
-    tl.to({}, { duration: 0.1 }, 11.0);
+    }, scaled(5.4));
+    tl.to({}, { duration: scaled(0.1) }, scaled(11.0));
 
     this.timeline = tl;
     return tl;
@@ -437,7 +446,7 @@ export class CameraDirector {
       return null;
     }
     this.killTimeline();
-    const duration = 0.5;
+    const duration = scaled(0.5);
     gsap.to(this, { veil: 1, duration, ease: 'power2.in' });
     return gsap.to([this.atlasA, this.atlasB], {
       opacity: 0,
@@ -469,7 +478,7 @@ export class CameraDirector {
     gsap.killTweensOf(this.atlasB);
   }
 
-  restoreSolarState(duration = 0.9) {
+  restoreSolarState(duration = scaled(0.9)) {
     gsap.to([this.atlasA, this.atlasB], {
       opacity: 0,
       duration,

@@ -30,6 +30,9 @@ Scope: `src/camera-director.js`, the camera-related parts of `src/main.js`,
 > document is stale — see §11.
 >
 > **Skip control.** Added after the baseline commit; §5.7 records its current values.
+>
+> **Transition speed.** A global `TIMELINE.speed` (currently `2`) was added after the
+> baseline; §5 lists the resulting runtime timings.
 
 ---
 
@@ -184,8 +187,12 @@ them: `introDolly` begins at `dist = WIDE.dist + 4.4 = 15.2`, above the user max
 
 ## 5. Transition catalogue
 
-All durations below are in seconds. "State" is the `STATES` value emitted at that
-timeline position; the readout renders it as `NN · name`.
+All durations below are in seconds, after the global `TIMELINE.speed` multiplier
+(currently `2`). `src/config.js` holds the base durations; `camera-director.js`
+divides them by `speed`, so every transition retimes together.
+
+"State" is the `STATES` value emitted at that timeline position; the readout
+renders it as `NN · name`.
 
 Everything in this section is the **baseline choreography at the Phase 2 alpha
 commit**. It records what the prototype currently does so a later change can be
@@ -195,30 +202,30 @@ describes how to change them deliberately.
 ### 5.1 `beginFlight` — category selection (full journey)
 
 Constructed by `CameraDirector.beginFlight()`, called from `main.onSelect()` before
-the 1700 ms panel-hide timer.
+the 850 ms panel-hide timer.
 
 | At | State | Rig / scene changes |
 | --- | --- | --- |
-| 0 → 2.2 | — | **Hold.** `t0 = TIMELINE.acknowledge = 2.2`; nothing animates |
-| 2.2 | `02 earth approach` | `dist → 5.1`, `el → 11.5°`, `fov → 45`, `focus → 0.45`, `offX → 0.02`, `offY → 0.01` (6.8 s, `power1.inOut`; offsets `power2.inOut`) |
-| 2.2 | — | `cloudOpacity → 0.34` (6.12 s), `spinScale → 0.62` (3.4 s), `coronaScale → 0.85` (6.8 s), `orbitLineFade → 0.55` (6.8 s) |
-| 9.0 | `03 earth orbit` | `dist → 2.7`, `az → regionAzTilt + 0.3` via `nearestAligned`, `el → 15°`, `fov → 40`, `focus → 0.85`, `offX → 0`, `offY → 0.022` (5.5 s) |
-| 9.0 | — | `cloudOpacity → 0.66`; `spinScale → 0.55` starts at 10.1 for 2.75 s |
-| 14.5 | `04 region approach` | `dist → 1.44` (`power2.in`), `az → regionAzTilt`, `el → regionElTilt + 3.2°`, `fov → 47`, `focus → 1`, `offX → −0.028`, `offY → 0.06` (4.5 s) |
-| 14.5 | — | `spinScale → 0.55` (2.475 s), `regionVisibility → 0.14` (2.7 s), `cloudOpacity → 0.92`, `orbitLineFade → 1` (1.6 s) |
-| 19.0 | `05 cloud entry` | `dist → 1.052` and `fov → 53` (`power1.in`), `offX → 0`, `offY → 0.03`, `veil → 0.9` (2.475 s) |
-| 19.0 | — | `cloudOpacity → 1.0` (2.25 s), `regionVisibility → 0.1` (2.25 s) |
-| 23.5 | `06 continent` | `atlasA` opacity → 1 (1.6 s, `power2.out`), `atlasA.zoom → 1.15` (3.2 s, `sine.inOut`), `veil → 0` (2.5 s, `power2.out`), `cloudOpacity → 0.4` (2.24 s). The veil is still up from cloud entry, so the globe→map swap happens underneath it |
-| 26.7 | `07 country` | `atlasA.u → 0.551`, `atlasA.v → 0.733` (4.0 s, `power3.out`); `atlasA.zoom → 9` (4.0 s, `power2.inOut`) |
-| 30.7 | — | Dissolve, no state change: `atlasB` set to `coxs.start` and faded in (1.7 s); `atlasA` fades out (1.36 s) while still zooming to `9 × 1.4`; `veil → 0.34` then back to 0 |
-| 32.4 | `08 locality` | `atlasB` `u/v/zoom → coxs.end` (2.8 s, `power2.out`) |
-| 35.2 | complete | `timeline = null`, `locked = false`, completion callback fires |
+| 0 → 1.1 | — | **Hold.** `t0 = TIMELINE.acknowledge = 1.1`; nothing animates |
+| 1.1 | `02 earth approach` | `dist → 5.1`, `el → 11.5°`, `fov → 45`, `focus → 0.45`, `offX → 0.02`, `offY → 0.01` (3.4 s, `power1.inOut`; offsets `power2.inOut`) |
+| 1.1 | — | `cloudOpacity → 0.34` (3.06 s), `spinScale → 0.62` (1.7 s), `coronaScale → 0.85` (3.4 s), `orbitLineFade → 0.55` (3.4 s) |
+| 4.5 | `03 earth orbit` | `dist → 2.7`, `az → regionAzTilt + 0.3` via `nearestAligned`, `el → 15°`, `fov → 40`, `focus → 0.85`, `offX → 0`, `offY → 0.022` (2.75 s) |
+| 4.5 | — | `cloudOpacity → 0.66`; `spinScale → 0.55` starts at 5.05 for 1.375 s |
+| 7.25 | `04 region approach` | `dist → 1.44` (`power2.in`), `az → regionAzTilt`, `el → regionElTilt + 3.2°`, `fov → 47`, `focus → 1`, `offX → −0.028`, `offY → 0.06` (2.25 s) |
+| 7.25 | — | `spinScale → 0.55` (1.24 s), `regionVisibility → 0.14` (1.35 s), `cloudOpacity → 0.92`, `orbitLineFade → 1` (0.8 s) |
+| 9.5 | `05 cloud entry` | `dist → 1.052` and `fov → 53` (`power1.in`), `offX → 0`, `offY → 0.03`, `veil → 0.9` (1.24 s) |
+| 9.5 | — | `cloudOpacity → 1.0` (1.125 s), `regionVisibility → 0.1` (1.125 s) |
+| 11.75 | `06 continent` | `atlasA` opacity → 1 (0.8 s, `power2.out`), `atlasA.zoom → 1.15` (1.6 s, `sine.inOut`), `veil → 0` (1.25 s, `power2.out`), `cloudOpacity → 0.4` (1.12 s). The veil is still up from cloud entry, so the globe→map swap happens underneath it |
+| 13.35 | `07 country` | `atlasA.u → 0.551`, `atlasA.v → 0.733` (2.0 s, `power3.out`); `atlasA.zoom → 9` (2.0 s, `power2.inOut`) |
+| 15.35 | — | Dissolve, no state change: `atlasB` set to `coxs.start` and faded in (0.85 s); `atlasA` fades out (0.68 s) while still zooming to `9 × 1.4`; `veil → 0.34` then back to 0 |
+| 16.2 | `08 locality` | `atlasB` `u/v/zoom → coxs.end` (1.4 s, `power2.out`) |
+| 17.6 | complete | `timeline = null`, `locked = false`, completion callback fires |
 
-**Total: 35.2 s.** Stage boundaries: 2.2 / 9.0 / 14.5 / 19.0 / 23.5 / 26.7 / 32.4.
+**Total: 17.6 s.** Stage boundaries: 1.1 / 4.5 / 7.25 / 9.5 / 11.75 / 13.35 / 15.35.
 
 **Verified** — There is no `settle` floor any more. `buildRegionSequence()` returns
 `t + TIMELINE.locality`, so the timeline ends exactly on the final atlas tween and the
-completion callback fires at 35.2 s.
+completion callback fires at 17.6 s.
 
 **Verified** — `CONTINENT` is also where input is switched off (`main.onStateChange`
 calls `controls.setEnabled(false)`). The camera is inside a flat map from this point
@@ -226,16 +233,16 @@ on, so drag and wheel have nothing to act on until Back.
 
 ### 5.2 `continueToRegion` — hotspot click from free orbit
 
-Same region sequence as 5.1 from its 14.5 s mark, starting at 0.
+Same region sequence as 5.1 from its 7.25 s mark, starting at 0.
 
 | At | State |
 | --- | --- |
 | 0 | `04 region approach` |
-| 4.5 | `05 cloud entry` |
-| 9.0 | `06 continent` |
-| 12.2 | `07 country` |
-| 17.9 | `08 locality` |
-| 20.7 | complete |
+| 2.25 | `05 cloud entry` |
+| 4.5 | `06 continent` |
+| 6.1 | `07 country` |
+| 8.95 | `08 locality` |
+| 10.35 | complete |
 
 Targets are identical to 5.1. `buildRegionSequence()` no longer takes a `shortened`
 flag, so this path is simply the tail of the full flight with no timing differences.
@@ -244,22 +251,22 @@ flag, so this path is simply the tail of the full flight with no timing differen
 
 Reached either directly, or through `exitAtlas()` when a map plate is on screen.
 
-`exitAtlas()` first fades both atlas plates out over 0.5 s while raising the veil to
+`exitAtlas()` first fades both atlas plates out over 0.25 s while raising the veil to
 1, then resets `atlasA`/`atlasB` to their start values and calls
 `returnToSolarSystem()`. When no plate is visible it forwards straight to
 `returnToSolarSystem()`, so callers do not need to know the current mode. Back from
-the map therefore takes 0.5 + 11.1 = **11.6 s**; from anywhere else, 11.1 s.
+the map therefore takes 0.25 + 5.55 = **5.8 s**; from anywhere else, 5.55 s.
 
 | At | State | Changes |
 | --- | --- | --- |
-| 0 | `06 continent` | `atlasA`/`atlasB` `opacity → 0` (0.9 s), `regionVisibility → 0` (1.8 s), `veil → 0` (1.2 s), `cloudOpacity → 0.72` (2.2 s), `spinScale → 0.55` (2 s), `dist → 2.6`, `fov → 44`, `offX → 0`, `offY → 0.023` (3.2 s) |
-| 2.6 | `02 earth approach` | `dist → 5.2`, `fov → 46`, `focus → 0.45` (4.4 s); `el → 12°`, `az → wideAz` (4.4 s); `cloudOpacity → 0.3`; `orbitLineFade → 0`, `coronaScale → 1` |
-| 5.4 | — | Final tween to `WIDE`: `dist 10.8`, `fov 56`, `focus 0`, `offX −0.278`, `offY 0`, `el 15°`, `az wideAz` (5.6 s, ends 11.0) |
-| 6.4 | `01 solar system` | Readout switches before the camera finishes arriving |
-| 11.0 | — | 0.1 s padding tween |
-| 11.1 | complete | `timeline = null`, `locked = false`, `setState(SOLAR_SYSTEM)`, callback |
+| 0 | `06 continent` | `atlasA`/`atlasB` `opacity → 0` (0.45 s), `regionVisibility → 0` (0.9 s), `veil → 0` (0.6 s), `cloudOpacity → 0.72` (1.1 s), `spinScale → 0.55` (1 s), `dist → 2.6`, `fov → 44`, `offX → 0`, `offY → 0.023` (1.6 s) |
+| 1.3 | `02 earth approach` | `dist → 5.2`, `fov → 46`, `focus → 0.45` (2.2 s); `el → 12°`, `az → wideAz` (2.2 s); `cloudOpacity → 0.3`; `orbitLineFade → 0`, `coronaScale → 1` |
+| 2.7 | — | Final tween to `WIDE`: `dist 10.8`, `fov 56`, `focus 0`, `offX −0.278`, `offY 0`, `el 15°`, `az wideAz` (2.8 s, ends 5.5) |
+| 3.2 | `01 solar system` | Readout switches before the camera finishes arriving |
+| 5.5 | — | 0.05 s padding tween |
+| 5.55 | complete | `timeline = null`, `locked = false`, `setState(SOLAR_SYSTEM)`, callback |
 
-**Total: 11.1 s.** The readout therefore goes `08 → 06 → 02 → 01` from the map, and
+**Total: 5.55 s.** The readout therefore goes `08 → 06 → 02 → 01` from the map, and
 `06 → 02 → 01` from elsewhere.
 
 **Verified** — This is a reverse *framing*, not a reversed timeline: stages are
@@ -277,7 +284,7 @@ Not a timeline. One `gsap.to` on the rig plus one on the director.
 | `focus` | 0.85 | 0.85 |
 | `offX` / `offY` | 0 / 0.023 | defaults |
 | `az` | `regionAzTilt` via `nearestAligned`, unless `keepAz` | `keepAz: true` (azimuth preserved) |
-| Duration | 3.4 | 3.4 |
+| Duration | 1.7 | 1.7 |
 | State | `03 earth orbit`, set immediately | same |
 | Scene | `spinScale 0.55`, `cloudOpacity 0.66`, `regionVisibility 0.85`, `orbitLineFade 1` | same |
 
@@ -288,7 +295,7 @@ reliability regression. See Q3 and Q10.
 
 ### 5.5 `introDolly` — entering the observatory
 
-Called once by `main.onEnter()` with `duration = 5.2`.
+Called once by `main.onEnter()` with `duration = 5.2` base, scaled to 2.6 s.
 
 | From | To |
 | --- | --- |
@@ -303,7 +310,7 @@ Ease `power2.out`. `az`, `el`, and `focus` are untouched.
 
 ### 5.6 `restoreSolarState` — interrupt cleanup
 
-Default duration 0.9 s, called bare by `interrupt()`.
+Default duration 0.45 s (`scaled(0.9)`), called bare by `interrupt()`.
 
 ```text
 orbitLineFade       → 0
@@ -334,24 +341,24 @@ sequence instead of playing it.
 | Scene | `spinScale 0.55`, `regionVisibility 0.1`, `cloudOpacity 0.4`, `orbitLineFade 1`, `coronaScale 0.85` |
 | Atlas | `atlasA.opacity 0`; `atlasB` at `coxs.end`, opacity 1 |
 | State | `08 locality` immediately |
-| Veil | jumps to 0.85, fades to 0 over 0.7 s |
+| Veil | jumps to 0.85, fades to 0 over 0.35 s |
 | Completion | callback fires when the veil clears; `MODE` becomes `ATLAS` |
 
-This is a tween, not a timeline, so `interrupt()` does not apply during the 0.7 s
+This is a tween, not a timeline, so `interrupt()` does not apply during the 0.35 s
 cut; controls are disabled for that window.
 
 ### 5.8 Totals
 
 | Path | Duration |
 | --- | --- |
-| `beginFlight` | 35.2 s |
-| `continueToRegion` | 20.7 s |
-| `returnToSolarSystem` | 11.1 s |
-| Back via `exitAtlas` (plate visible) | 11.6 s |
-| `enterFreeOrbit` | 3.4 s |
-| `introDolly` | 5.2 s |
-| `restoreSolarState` | 0.9 s |
-| `skipToRegion` | 0.7 s |
+| `beginFlight` | 17.6 s |
+| `continueToRegion` | 10.35 s |
+| `returnToSolarSystem` | 5.55 s |
+| Back via `exitAtlas` (plate visible) | 5.8 s |
+| `enterFreeOrbit` | 1.7 s |
+| `introDolly` | 2.6 s |
+| `restoreSolarState` | 0.45 s |
+| `skipToRegion` | 0.35 s |
 
 ---
 
@@ -485,7 +492,7 @@ In this order:
 1. `killTimeline()` runs: timeline killed, `timeline = null`,
    `pendingComplete = null`, rig/director tweens killed.
 2. `locked = false`.
-3. `restoreSolarState()` starts a 0.9 s tween of scene parameters only (§5.6).
+3. `restoreSolarState()` starts a 0.45 s tween of scene parameters only (§5.6).
 4. `near = director.rig.dist < 6` (strict).
 5. `MODE = EXPLORE` if `near`, otherwise `SOLAR`.
 6. `ui.hideSelectionNote()`.
@@ -534,17 +541,17 @@ rotating and while more than one region can be addressed. See §13.
 
 | Situation | Behaviour | Status |
 | --- | --- | --- |
-| Interrupt during the 2.2 s hold | Mode `SOLAR` (`dist` still 10.8); panel restored — except the Q2 timer race | Verified / Q2 runtime-pending |
+| Interrupt during the 1.1 s hold | Mode `SOLAR` (`dist` still 10.8); panel restored — except the Q2 timer race | Verified / Q2 runtime-pending |
 | Interrupt early in approach | Mode `SOLAR` (`dist > 6`) | Verified |
 | Interrupt late in approach | Mode `EXPLORE` (`dist < 6`), hotspot armed | Verified |
 | Interrupt during cloud entry | Mode `EXPLORE`; veil fades to 0, atlas never appears | Verified |
 | Interrupt during `returnToSolarSystem` | `interrupt()` succeeds; the return timeline's own callback never runs, so panel restoration comes from `onUserIntent` | Verified |
 | Drag/wheel during `CONTINENT` → `LOCALITY` | No effect: controls are disabled on the `CONTINENT` state change | Verified |
-| Skip during any flight | Timeline killed; 0.7 s veil cut; map reveal and destination card | Verified |
+| Skip during any flight | Timeline killed; 0.35 s veil cut; map reveal and destination card | Verified |
 | Escape during `ATLAS` | Runs `onBack()` and leaves the map | Verified |
 | `Escape` during `FLYING` | No effect | Verified |
 | Back during `FLYING` | No effect | Verified |
-| Interrupt within 1.7 s of selection | Suspected: stale `hidePanel` timer hides the restored panel (Q2) | Runtime-pending |
+| Interrupt within 0.85 s of selection | Suspected: stale `hidePanel` timer hides the restored panel (Q2) | Runtime-pending |
 | Interrupt during return with `dist < 6` | Suspected: `hotspotArmed = true` while `regionVisibility → 0` leaves an invisible-but-hittable hotspot (Q8) | Runtime-pending |
 
 ### 7.6 What is deliberately *not* protected
@@ -554,7 +561,7 @@ rotating and while more than one region can be addressed. See §13.
 - The single-region targeting strategy and its precomputed azimuth (Q4).
 - The single-scalar `regionVisibility` model.
 - Panel timing races (Q2).
-- Any behaviour reachable only by interrupting within the first 1.7 s.
+- Any behaviour reachable only by interrupting within the first 0.85 s.
 
 An intentional change to any of these is a design decision, not a violation. The
 guarantees in §7.3–§7.4 must still hold afterwards.
@@ -586,7 +593,7 @@ objects owned by the director; `Atlas.update()` converts them into texture
 
 **MUST NOT** — Leave a visible region marker while `MODE` is `SOLAR` after recovery.
 In the current prototype this is guaranteed by `restoreSolarState()` driving
-`regionVisibility` to 0 over 0.9 s. The single scalar is a prototype choice, not a
+`regionVisibility` to 0 over 0.45 s. The single scalar is a prototype choice, not a
 permanent model: if multi-region work tracks visibility per region, the same
 requirement applies to each region.
 
@@ -612,25 +619,25 @@ machines; the ordering and ratios are what matter.
 
 | Elapsed | Readout | Visual checkpoint |
 | --- | --- | --- |
-| 0.0 | `01 · solar system` | Selection note appears; panel disabled immediately, fade scheduled for 1.7 s |
-| 2.2 | `02 · earth approach` | Camera starts closing; panel still fading (gone by ~3.4 s — two overlapping `hidePanel` calls) |
-| 9.0 | `03 · earth orbit` | Earth fills frame; orbit lines fading |
-| 14.5 | `04 · region approach` | Descent accelerates into the globe |
-| 19.0 | `05 · cloud entry` | Veil near peak, clouds dense |
-| 23.5 | `06 · continent` | Veil lifts onto the flat Asia map; drag and wheel stop responding |
-| 26.7 | `07 · country` | Dive onto Bangladesh, destination card appears |
-| 32.4 | `08 · locality` | Beach plate settles |
-| 35.2 | `08 · locality` | Motion settled |
+| 0.0 | `01 · solar system` | Selection note appears; panel disabled immediately, fade scheduled for 0.85 s |
+| 1.1 | `02 · earth approach` | Camera starts closing; panel still fading (gone by ~2.5 s — two overlapping `hidePanel` calls) |
+| 4.5 | `03 · earth orbit` | Earth fills frame; orbit lines fading |
+| 7.25 | `04 · region approach` | Descent accelerates into the globe |
+| 9.5 | `05 · cloud entry` | Veil near peak, clouds dense |
+| 11.75 | `06 · continent` | Veil lifts onto the flat Asia map; drag and wheel stop responding |
+| 13.35 | `07 · country` | Dive onto Bangladesh, destination card appears |
+| 16.2 | `08 · locality` | Beach plate settles |
+| 17.6 | `08 · locality` | Motion settled |
 
-Hotspot click from free orbit: `04` at 0, `05` at 4.5, `06` at 9.0, `07` at 12.2,
-`08` at 17.9, settled at 20.7.
+Hotspot click from free orbit: `04` at 0, `05` at 2.25, `06` at 4.5, `07` at 6.1,
+`08` at 8.95, settled at 10.35.
 
-Back button from the map: `06` at 0, `02` at 3.1, `01` at 6.9, settled at 11.6
-(the 0.5 s plate fade precedes the return). From elsewhere: `06` at 0, `02` at 2.6,
-`01` at 6.4, settled at 11.1.
+Back button from the map: `06` at 0, `02` at 1.55, `01` at 3.45, settled at 5.8
+(the 0.25 s plate fade precedes the return). From elsewhere: `06` at 0, `02` at 1.3,
+`01` at 3.2, settled at 5.55.
 
 Skip control: hidden until a category, the place, or the region hotspot starts a
-flight; it then reaches `08 · locality` in 0.7 s with the destination card shown.
+flight; it then reaches `08 · locality` in 0.35 s with the destination card shown.
 
 ### 9.2 Interruption matrix
 
@@ -641,8 +648,8 @@ Reload the page between destructive tests to return to the baseline.
 | I1 | Drag 1 s after selecting a category | Readout stays `01`; hint "Flight interrupted · manual control restored"; no destination card; panel should be visible — **if it is not, Q2 is confirmed** |
 | I2 | Drag ~3 s after selection | Mode `SOLAR`; panel returns; `dist > 6` |
 | I3 | Drag ~8.5 s after selection | Mode `EXPLORE`; hotspot armed |
-| I4 | Wheel during cloud entry (~20 s) | Mode `EXPLORE`; veil fades out; region marker fades |
-| I5 | Drag/wheel after `06 · continent` appears (~24 s) | No effect at all — controls are disabled; the flight continues to the map |
+| I4 | Wheel during cloud entry (~10.5 s) | Mode `EXPLORE`; veil fades out; region marker fades |
+| I5 | Drag/wheel after `06 · continent` appears (~12.5 s) | No effect at all — controls are disabled; the flight continues to the map |
 | I6 | Wheel ~3 s into the Back transition | Manual control restored; panel returns; readout is not `01`; no stuck state |
 | I7 | Press Escape during any flight | Nothing happens |
 | I8 | Click Back during any flight | Nothing happens |
@@ -698,16 +705,16 @@ current approach.
 | ID | Finding | Evidence | Status |
 | --- | --- | --- | --- |
 | Q1 | *Resolved in Phase 2 alpha.* The `shortened` flag and the `settle` floor are gone; `buildRegionSequence()` is now the single region tail used by both entry paths, and its duration is exactly the sum of `continent + country + dissolve + locality` | `camera-director.js → buildRegionSequence` | Resolved |
-| Q2 | **Early-interrupt panel race.** `onSelect()` schedules `hidePanel(1.6)` at 1700 ms and never clears it. An interrupt before 1.7 s calls `showPanel()`, then the stale timer fades the panel out again. Because `.panel-inner` keeps `pointer-events: auto`, the invisible panel may remain clickable | `main.js` 1700 ms timer; `ui.js → hidePanel`; `styles.css .panel-inner` | **Suspected defect — runtime validation required** |
-| Q3 | **Unguarded camera tweens vs. manual input.** `introDolly` writes `dist`/`fov`/`offX`/`offY` for 5.2 s with no input guard, so wheel zoom during it is overwritten each frame; it also starts at `dist = 15.2`, above the user maximum of 15. `enterFreeOrbit` similarly tweens `el` for 3.4 s and can fight a drag | `camera-director.js` introDolly/enterFreeOrbit; `controls.js` clamps | Confirmed source fact |
-| Q4 | **Stale region target.** `buildRegionSequence()` runs synchronously at click time and captures `regionAzTilt`/`regionElTilt`. Earth keeps spinning at `spinScale ≈ 0.55` for the next 14.5 s, so the target azimuth is sampled before the descent begins | `camera-director.js` construction order; `earth.getRegionAzElTilt()` | **Suspected defect — visual impact not measured** |
+| Q2 | **Early-interrupt panel race.** `onSelect()` schedules `hidePanel(0.8)` at 850 ms and never clears it. An interrupt before 0.85 s calls `showPanel()`, then the stale timer fades the panel out again. Because `.panel-inner` keeps `pointer-events: auto`, the invisible panel may remain clickable | `main.js` 850 ms timer; `ui.js → hidePanel`; `styles.css .panel-inner` | **Suspected defect — runtime validation required** |
+| Q3 | **Unguarded camera tweens vs. manual input.** `introDolly` writes `dist`/`fov`/`offX`/`offY` for 2.6 s with no input guard, so wheel zoom during it is overwritten each frame; it also starts at `dist = 15.2`, above the user maximum of 15. `enterFreeOrbit` similarly tweens `el` for 1.7 s and can fight a drag | `camera-director.js` introDolly/enterFreeOrbit; `controls.js` clamps | Confirmed source fact |
+| Q4 | **Stale region target.** `buildRegionSequence()` runs synchronously at click time and captures `regionAzTilt`/`regionElTilt`. Earth keeps spinning at `spinScale ≈ 0.55` for the next 7.25 s, so the target azimuth is sampled before the descent begins | `camera-director.js` construction order; `earth.getRegionAzElTilt()` | **Suspected defect — visual impact not measured** |
 | Q5 | **Composition persists after interrupt.** `restoreSolarState()` does not reset `focus`, `offX`, or `offY`. Interrupting near the region leaves the look target biased toward the region point and the framing offset applied | `camera-director.js → restoreSolarState` | Confirmed source fact |
 | Q6 | Completion ordering differs between paths: the flight paths clear `locked` then call back; the return path also calls `setState(SOLAR_SYSTEM)` between them | `camera-director.js` onComplete blocks | Confirmed source fact |
 | Q7 | **Return has no `pendingComplete`.** `returnToSolarSystem()` passes its callback directly to the timeline, so `killTimeline()` cannot route it, and an interrupted return never fires it. Panel restoration then depends entirely on `onUserIntent()` | `camera-director.js → returnToSolarSystem` | **Suspected defect — relies on a second code path** |
 | Q8 | **Invisible hotspot after interrupting a return.** When a return is interrupted with `dist < 6`, `hotspotArmed` becomes `true` while `regionVisibility` tweens to 0, leaving a hittable marker that is fading or invisible | `main.onUserIntent`; `restoreSolarState`; `main.updateHotspot` | **Suspected defect — runtime validation required** |
 | Q9 | **Overlapping return tweens.** The stage-2 tween runs 2.6–7.0 s and the final tween starts at 5.4 s; both target `dist`, `fov`, `focus`, `el`, and `az` on the same object for 1.6 s. GSAP resolves the conflict by render order, so the outcome is not explicit in the code | `camera-director.js` 2.6 s and 5.4 s blocks | Confirmed source fact; runtime effect unmeasured |
 | Q10 | `director.onComplete` is initialised but never assigned, so `enterFreeOrbit()`'s `if (this.onComplete)` branch is dead | `camera-director.js:47`; no assignment in `src/` | Confirmed source fact |
-| Q11 | **The map has only two scales, so the beach hand-off is not a true continuous zoom.** At `asia.end.zoom = 9` the 1887×1962 plate shows a ~120 px tall window stretched to the frame (~8× upscale, and ~11× by the end of the dissolve), while `coxs-bazar.jpg` at `zoom 1.15` is close to 1:1. The 1.7 s cross-fade hides the cut but not the scale ratio, so the arrival can read as a fall rather than a dive. A third intermediate plate is the real fix | `ATLAS.levels` in `config.js`; `src/atlas.js → update()` window math | Confirmed source fact; visual severity unmeasured across viewports |
+| Q11 | **The map has only two scales, so the beach hand-off is not a true continuous zoom.** At `asia.end.zoom = 9` the 1887×1962 plate shows a ~120 px tall window stretched to the frame (~8× upscale, and ~11× by the end of the dissolve), while `coxs-bazar.jpg` at `zoom 1.15` is close to 1:1. The 0.85 s cross-fade hides the cut but not the scale ratio, so the arrival can read as a fall rather than a dive. A third intermediate plate is the real fix | `ATLAS.levels` in `config.js`; `src/atlas.js → update()` window math | Confirmed source fact; visual severity unmeasured across viewports |
 
 ---
 

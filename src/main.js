@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { gsap } from '../vendor/gsap/index.js';
-import { RENDER, SUN, EARTH, STATES } from './config.js';
+import { RENDER, SUN, EARTH, STATES, TIMELINE } from './config.js';
 import { clamp, smoothstep, DEG } from './utils.js';
 import { AssetLoader } from './assets.js';
 import { Starfield } from './starfield.js';
@@ -200,7 +200,8 @@ class App {
     this.region.setHover(0);
     this.ui.showSkip();
     this.director.beginFlight(() => this.onFlightComplete());
-    window.setTimeout(() => this.ui.hidePanel(1.6), 1700);
+    const speed = TIMELINE.speed || 1;
+    window.setTimeout(() => this.ui.hidePanel(1.6 / speed), 1700 / speed);
   }
 
   onFlightComplete() {

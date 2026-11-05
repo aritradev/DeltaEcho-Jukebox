@@ -156,6 +156,7 @@ export const STATES = {
 };
 
 export const TIMELINE = {
+  speed: 2,
   acknowledge: 2.2,
   approach: 6.8,
   orbit: 5.5,
