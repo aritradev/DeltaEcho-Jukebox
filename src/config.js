@@ -5,7 +5,7 @@ export const RENDER = {
   near: 0.05,
   far: 12000,
   maxPixelRatio: 2,
-  exposure: 1.0
+  exposure: 0.95
 };
 
 export const SUN = {
@@ -114,11 +114,11 @@ export const PLANETS = [
 ];
 
 export const REGION = {
-  name: "Cox's Bazar",
-  label: "Cox's Bazar",
+  name: 'Bay of Bengal',
+  label: 'Bay of Bengal',
   sublabel: 'Available region',
-  lat: 21.43,
-  lon: 91.97,
+  lat: 16.5,
+  lon: 89.0,
   capAngle: 0.215,
   shellScale: 1.0055,
   beamHeight: 0.135,
@@ -128,44 +128,24 @@ export const REGION = {
   hitRadius: 0.135
 };
 
-export const ATLAS = {
-  distance: 1,
-  levels: {
-    asia: {
-      map: 'asia-satellite.jpg',
-      start: { u: 0.5, v: 0.6, zoom: 1 },
-      end: { u: 0.551, v: 0.733, zoom: 9 }
-    },
-    coxs: {
-      map: 'coxs-bazar.jpg',
-      start: { u: 0.5, v: 0.48, zoom: 1.15 },
-      end: { u: 0.52, v: 0.455, zoom: 1.7 }
-    }
-  }
-};
-
 export const STATES = {
   SOLAR_SYSTEM: { id: 1, name: 'solar system' },
   EARTH_APPROACH: { id: 2, name: 'earth approach' },
   EARTH_ORBIT: { id: 3, name: 'earth orbit' },
   REGION_APPROACH: { id: 4, name: 'region approach' },
   CLOUD_ENTRY: { id: 5, name: 'cloud entry' },
-  CONTINENT: { id: 6, name: 'continent' },
-  COUNTRY: { id: 7, name: 'country' },
-  LOCALITY: { id: 8, name: 'locality' }
+  REGION_REVEAL: { id: 6, name: 'region reveal' },
+  REGION_HOTSPOT: { id: 7, name: 'region hotspot' }
 };
 
 export const TIMELINE = {
-  speed: 2,
   acknowledge: 2.2,
   approach: 6.8,
   orbit: 5.5,
   regionApproach: 4.5,
   cloudEntry: 4.5,
-  continent: 3.2,
-  country: 4.0,
-  dissolve: 1.7,
-  locality: 2.8
+  reveal: 4.5,
+  lock: 2.0
 };
 
 export const CATEGORIES = [

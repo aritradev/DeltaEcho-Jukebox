@@ -1,38 +1,11 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { mulberry32, createCanvas, canvasTexture, TAU } from './utils.js';
 
 const SHELLS = [
-  { radius: 900, count: 820, size: [0.8, 1.9], brightness: [0.34, 0.72], warm: 0.1 },
-  { radius: 1700, count: 620, size: [0.65, 1.45], brightness: [0.22, 0.5], warm: 0.16 },
-  { radius: 2900, count: 420, size: [0.5, 1.1], brightness: [0.13, 0.32], warm: 0.2 }
+  { radius: 900, count: 1300, size: [1.2, 3.1], brightness: [0.4, 0.82], warm: 0.1 },
+  { radius: 1700, count: 1100, size: [0.95, 2.3], brightness: [0.24, 0.56], warm: 0.16 },
+  { radius: 2900, count: 750, size: [0.8, 1.7], brightness: [0.12, 0.34], warm: 0.2 }
 ];
-
-// Nebula palette, matching the reference build. The weights bias the sky
-// towards maroon and violet; green and blue stay as faint accents.
-const NEBULA_COLORS = [
-  { rgb: [153, 102, 255], weight: 1.0 }, // violet
-  { rgb: [255, 102, 153], weight: 1.15 }, // rose
-  { rgb: [255, 0, 0], weight: 0.5 }, // red
-  { rgb: [76, 114, 191], weight: 0.4 }, // blue
-  { rgb: [102, 255, 153], weight: 0.26 } // green
-];
-
-const NEBULA = {
-  width: 2048,
-  height: 1024,
-  base: [3, 2, 5],
-  clusters: 12, // spread evenly around the sky so no direction is empty
-  spritesPerCluster: 22,
-  washSprites: 8, // faint fallback so no view is ever pure black
-  spread: 0.45, // angular sigma of a cluster, radians
-  latBand: 1.15, // how far from the equator a cluster centre may sit, radians
-  radiusBase: 0.045, // sprite radius as a fraction of map width (~32 degrees)
-  radiusVariance: 0.85,
-  gain: 0.085,
-  knee: 55,
-  kneeRange: 45,
-  dither: 2.5
-};
 
 const STAR_VERT = `
 attribute float aSize;
@@ -44,7 +17,7 @@ varying vec3 vColor;
 varying float vBright;
 void main() {
   vColor = aColor;
-  float breathe = 0.96 + 0.04 * sin(uTime * 0.22 + aPhase * 6.28318);
+  float breathe = 0.9 + 0.1 * sin(uTime * 0.35 + aPhase * 6.28318);
   vBright = breathe;
   vec4 mv = modelViewMatrix * vec4(position, 1.0);
   float depth = max(1.0, -mv.z);
@@ -121,189 +94,75 @@ function buildShell(def, rng) {
   return new THREE.Points(geometry, material);
 }
 
-function gaussian(rng) {
-  let u = 0;
-  let v = 0;
-  while (u === 0) u = rng();
-  while (v === 0) v = rng();
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
-}
+function buildGalaxyTexture(rng) {
+  const w = 2048;
+  const h = 1024;
+  const canvas = createCanvas(w, h);
+  const ctx = canvas.getContext('2d');
 
-const NEBULA_TOTAL_WEIGHT = NEBULA_COLORS.reduce((sum, entry) => sum + entry.weight, 0);
+  ctx.fillStyle = '#070a12';
+  ctx.fillRect(0, 0, w, h);
 
-function pickNebulaColor(rng) {
-  let r = rng() * NEBULA_TOTAL_WEIGHT;
-  for (const entry of NEBULA_COLORS) {
-    if (r < entry.weight) return entry;
-    r -= entry.weight;
-  }
-  return NEBULA_COLORS[NEBULA_COLORS.length - 1];
-}
-
-/**
- * Turns the smoke sprite into a grayscale density map. The reference nebula is
- * built from this texture, so the cloud structure comes from the image itself
- * rather than from any falloff we would have to invent.
- */
-function buildSmokeBrush(image) {
-  const width = image.width;
-  const height = image.height;
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(image, 0, 0);
-  const pixels = ctx.getImageData(0, 0, width, height).data;
-  const density = new Float32Array(width * height);
-  for (let i = 0; i < width * height; i += 1) {
-    // Additive blending multiplies colour by alpha, so that is the visible weight.
-    density[i] = (pixels[i * 4] / 255) * (pixels[i * 4 + 3] / 255);
-  }
-  return { width, height, density };
-}
-
-function sampleBrush(brush, u, v) {
-  if (u <= 0 || u >= 1 || v <= 0 || v >= 1) return 0;
-  const { width, height, density } = brush;
-  const x = u * width - 0.5;
-  const y = v * height - 0.5;
-  const x0 = Math.max(0, Math.min(width - 1, Math.floor(x)));
-  const y0 = Math.max(0, Math.min(height - 1, Math.floor(y)));
-  const x1 = Math.min(width - 1, x0 + 1);
-  const y1 = Math.min(height - 1, y0 + 1);
-  const fx = x - x0;
-  const fy = y - y0;
-  const a = density[y0 * width + x0];
-  const b = density[y0 * width + x1];
-  const c = density[y1 * width + x0];
-  const d = density[y1 * width + x1];
-  return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
-}
-
-/**
- * Bakes the smoke-brush nebula into one equirectangular skybox texture, so the
- * whole backdrop costs a single draw call and no extra overdraw.
- *
- * Accumulation happens in a float buffer and is written once. Canvas additive
- * blending rounds every sprite to 8 bits, and with this many faint overlaps
- * those roundings line up into a visible lattice, so painting directly is not
- * an option.
- */
-function buildNebulaTexture(brush, rng) {
-  const width = NEBULA.width;
-  const height = NEBULA.height;
-  const accum = new Float32Array(width * height * 3);
-  for (let i = 0; i < width * height; i += 1) {
-    accum[i * 3] = NEBULA.base[0];
-    accum[i * 3 + 1] = NEBULA.base[1];
-    accum[i * 3 + 2] = NEBULA.base[2];
-  }
-
-  // Sprites are stamped three times so the horizontal wrap stays seamless.
-  const paintSprite = (x, y, rx, ry, rotation, rgb, alpha) => {
-    if (alpha <= 0) return;
-    const cos = Math.cos(rotation);
-    const sin = Math.sin(rotation);
-    for (const offset of [-width, 0, width]) {
-      const cx = x + offset;
-      if (cx + rx < 0 || cx - rx > width) continue;
-      const x0 = Math.max(0, Math.floor(cx - rx));
-      const x1 = Math.min(width - 1, Math.ceil(cx + rx));
-      const y0 = Math.max(0, Math.floor(y - ry));
-      const y1 = Math.min(height - 1, Math.ceil(y + ry));
-      for (let py = y0; py <= y1; py += 1) {
-        const dy = (py + 0.5 - y) / ry;
-        if (dy <= -1 || dy >= 1) continue;
-        const row = py * width;
-        for (let px = x0; px <= x1; px += 1) {
-          const dx = (px + 0.5 - cx) / rx;
-          if (dx <= -1 || dx >= 1) continue;
-          const sx = dx * cos + dy * sin;
-          const sy = -dx * sin + dy * cos;
-          if (sx <= -1 || sx >= 1 || sy <= -1 || sy >= 1) continue;
-          const density = sampleBrush(brush, sx * 0.5 + 0.5, sy * 0.5 + 0.5);
-          if (density <= 0.001) continue;
-          const k = density * alpha;
-          const i = (row + px) * 3;
-          accum[i] += rgb[0] * k;
-          accum[i + 1] += rgb[1] * k;
-          accum[i + 2] += rgb[2] * k;
-        }
-      }
+  const bandTilt = -0.42;
+  const bandCenter = h * 0.5;
+  const drawBand = (target, color, count, sizeMin, sizeMax, alpha, spreadMin, spreadRange) => {
+    target.globalCompositeOperation = 'source-over';
+    for (let i = 0; i < count; i += 1) {
+      const u = rng();
+      const spread = spreadMin + spreadRange * rng();
+      const v = bandCenter + Math.sin(u * Math.PI * 2 + 0.6) * h * bandTilt * 0.9 + (rng() - 0.5) * h * spread;
+      const size = sizeMin + (sizeMax - sizeMin) * Math.pow(rng(), 2);
+      const x = u * w;
+      const y = Math.max(-size, Math.min(h + size, v));
+      const grad = target.createRadialGradient(x, y, 0, x, y, size);
+      grad.addColorStop(0, color.replace('ALPHA', (alpha * (0.5 + rng() * 0.5)).toFixed(3)));
+      grad.addColorStop(1, color.replace('ALPHA', '0'));
+      target.fillStyle = grad;
+      target.beginPath();
+      target.ellipse(x, y, size, size * (0.6 + rng() * 0.8), rng() * Math.PI, 0, TAU);
+      target.fill();
     }
   };
 
-  // Clusters are stratified by azimuth and carry one palette colour each, which
-  // is what produces maroon in one part of the sky and violet in another.
-  for (let c = 0; c < NEBULA.clusters; c += 1) {
-    const entry = pickNebulaColor(rng);
-    const az = ((c + rng() * 0.8) / NEBULA.clusters) * TAU;
-    const lat = (rng() * 2 - 1) * NEBULA.latBand;
+  drawBand(ctx, 'rgba(104,128,176,ALPHA)', 1500, 60, 260, 0.011, 0.12, 0.2);
+  drawBand(ctx, 'rgba(126,152,196,ALPHA)', 2100, 16, 92, 0.068, 0.055, 0.13);
+  drawBand(ctx, 'rgba(178,196,226,ALPHA)', 1200, 12, 62, 0.06, 0.05, 0.12);
+  drawBand(ctx, 'rgba(96,120,170,ALPHA)', 640, 24, 132, 0.042, 0.06, 0.14);
 
-    for (let i = 0; i < NEBULA.spritesPerCluster; i += 1) {
-      const sLat = Math.max(-1.35, Math.min(1.35, lat + gaussian(rng) * NEBULA.spread * 0.72));
-      const sAz = az + gaussian(rng) * NEBULA.spread;
-      const radiusFrac = NEBULA.radiusBase * (1 - NEBULA.radiusVariance * 0.5 + rng() * NEBULA.radiusVariance);
-      const radius = radiusFrac * width;
-      // Widen near the poles so the sprite stays round once the sphere is
-      // curved back out of the equirectangular map.
-      const stretch = 1 / Math.max(0.28, Math.cos(sLat));
-      const alpha = NEBULA.gain * entry.weight * (0.45 + rng() * 1.0);
-      paintSprite(
-        (sAz / TAU) * width,
-        (0.5 - sLat / Math.PI) * height,
-        radius * stretch,
-        radius,
-        rng() * TAU,
-        entry.rgb,
-        alpha
-      );
-    }
+  ctx.globalCompositeOperation = 'multiply';
+  for (let i = 0; i < 420; i += 1) {
+    const u = rng();
+    const spread = 0.045 + 0.1 * rng();
+    const v = bandCenter + Math.sin(u * Math.PI * 2 + 0.6) * h * bandTilt * 0.9 + (rng() - 0.5) * h * spread;
+    const size = 20 + rng() * 150;
+    const grad = ctx.createRadialGradient(u * w, v, 0, u * w, v, size);
+    grad.addColorStop(0, `rgba(14,18,28,${(0.55 + rng() * 0.4).toFixed(2)})`);
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(u * w, v, size, size * 0.45, rng() * Math.PI, 0, TAU);
+    ctx.fill();
   }
 
-  // A faint wash so the sky is never flat black in any direction.
-  for (let i = 0; i < NEBULA.washSprites; i += 1) {
-    const rgb = NEBULA_COLORS[i % NEBULA_COLORS.length].rgb;
-    const sAz = ((i + rng() * 0.7) / NEBULA.washSprites) * TAU;
-    const sLat = Math.asin(2 * rng() - 1) * 0.8;
-    const radius = (0.06 + rng() * 0.09) * width;
-    paintSprite(
-      (sAz / TAU) * width,
-      (0.5 - sLat / Math.PI) * height,
-      radius / Math.max(0.28, Math.cos(sLat)),
-      radius,
-      rng() * TAU,
-      rgb,
-      NEBULA.gain * 0.16
-    );
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 2200; i += 1) {
+    const u = rng();
+    const spread = 0.04 + 0.09 * rng();
+    const v = bandCenter + Math.sin(u * Math.PI * 2 + 0.6) * h * bandTilt * 0.9 + (rng() - 0.5) * h * spread;
+    if (v < -4 || v > h + 4) continue;
+    const size = 0.5 + rng() * 1.4;
+      ctx.fillStyle = `rgba(198,214,240,${(0.09 + rng() * 0.34).toFixed(2)})`;
+    ctx.fillRect(u * w, v, size, size);
   }
 
-  // Where clusters overlap the additive sum can exceed a sane brightness. A soft
-  // knee rolls those highlights off smoothly instead of clipping to a hot core.
-  const canvas = createCanvas(width, height);
-  const ctx = canvas.getContext('2d');
-  const image = ctx.createImageData(width, height);
-  const px = image.data;
-  for (let i = 0, o = 0; i < width * height; i += 1, o += 4) {
-    // A light per-pixel dither hides 8-bit banding in the darkest gradients.
-    const n = (rng() - 0.5) * NEBULA.dither;
-    for (let c = 0; c < 3; c += 1) {
-      let value = accum[i * 3 + c];
-      if (value > NEBULA.knee) {
-        value = NEBULA.knee + NEBULA.kneeRange * (1 - Math.exp(-(value - NEBULA.knee) / NEBULA.kneeRange));
-      }
-      value += n;
-      px[o + c] = value < 0 ? 0 : value > 255 ? 255 : value;
-    }
-    px[o + 3] = 255;
-  }
-  ctx.putImageData(image, 0, 0);
-
+  ctx.globalCompositeOperation = 'source-over';
   const texture = canvasTexture(canvas, { srgb: true });
   texture.wrapS = THREE.RepeatWrapping;
   return texture;
 }
 
 export class Starfield {
-  constructor(pixelRatio, smokeTexture) {
+  constructor(pixelRatio, galaxyTexture) {
     this.group = new THREE.Group();
     this.shells = [];
     this.spin = new THREE.Group();
@@ -318,24 +177,18 @@ export class Starfield {
       this.spin.add(points);
     }
 
-    const brush = smokeTexture && smokeTexture.image ? buildSmokeBrush(smokeTexture.image) : null;
-    if (brush) {
-      const backdropGeometry = new THREE.SphereGeometry(5200, 48, 32);
-      const backdropMaterial = new THREE.MeshBasicMaterial({
-        map: buildNebulaTexture(brush, rng),
-        color: 0xffffff,
-        side: THREE.BackSide,
-        depthWrite: false,
-        fog: false,
-        toneMapped: false
-      });
-      this.backdrop = new THREE.Mesh(backdropGeometry, backdropMaterial);
-      this.backdrop.frustumCulled = false;
-      this.backdrop.renderOrder = -10;
-      this.spin.add(this.backdrop);
-    } else {
-      console.warn('nebula brush unavailable; backdrop disabled');
-    }
+    const galaxyGeometry = new THREE.SphereGeometry(5200, 48, 32);
+    const galaxyMaterial = new THREE.MeshBasicMaterial({
+      map: galaxyTexture || buildGalaxyTexture(rng),
+      color: 0x49536e,
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false
+    });
+    this.galaxy = new THREE.Mesh(galaxyGeometry, galaxyMaterial);
+    this.galaxy.frustumCulled = false;
+    this.galaxy.renderOrder = -10;
+    this.spin.add(this.galaxy);
   }
 
   update(elapsed, camera) {
@@ -350,6 +203,50 @@ export class Starfield {
   setPixelRatio(ratio) {
     for (const shell of this.shells) {
       shell.material.uniforms.uPixelRatio.value = ratio;
+    }
+  }
+
+  /**
+   * Trim star counts to keep frame budget in check on the downshift quality
+   * tier.  Rebuilds the affected shells' geometries; preserves the same RNG
+   * seed so the same stars are kept (just fewer extras).
+   */
+  applyShellCounts(targetCounts) {
+    for (let i = 0; i < this.shells.length && i < targetCounts.length; i += 1) {
+      const shell = this.shells[i];
+      const desired = targetCounts[i];
+      const current = shell.geometry.attributes.position.count;
+      if (desired === current) continue;
+      const factor = desired / current;
+      const newCount = Math.max(120, Math.round(current * factor));
+      const newGeo = shell.geometry.clone();
+      const positions = newGeo.attributes.position.array;
+      const colors = newGeo.attributes.aColor.array;
+      const sizes = newGeo.attributes.aSize.array;
+      const phases = newGeo.attributes.aPhase.array;
+      const pick = new Uint16Array(newCount);
+      for (let k = 0; k < newCount; k += 1) pick[k] = k * (current / newCount) | 0;
+      const np = new Float32Array(newCount * 3);
+      const nc = new Float32Array(newCount * 3);
+      const ns = new Float32Array(newCount);
+      const nh = new Float32Array(newCount);
+      for (let k = 0; k < newCount; k += 1) {
+        const src = pick[k];
+        np[k * 3] = positions[src * 3];
+        np[k * 3 + 1] = positions[src * 3 + 1];
+        np[k * 3 + 2] = positions[src * 3 + 2];
+        nc[k * 3] = colors[src * 3];
+        nc[k * 3 + 1] = colors[src * 3 + 1];
+        nc[k * 3 + 2] = colors[src * 3 + 2];
+        ns[k] = sizes[src];
+        nh[k] = phases[src];
+      }
+      newGeo.setAttribute('position', new THREE.BufferAttribute(np, 3));
+      newGeo.setAttribute('aColor', new THREE.BufferAttribute(nc, 3));
+      newGeo.setAttribute('aSize', new THREE.BufferAttribute(ns, 1));
+      newGeo.setAttribute('aPhase', new THREE.BufferAttribute(nh, 1));
+      shell.geometry.dispose();
+      shell.geometry = newGeo;
     }
   }
 }

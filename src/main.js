@@ -1,23 +1,21 @@
 import * as THREE from 'three';
 import { gsap } from '../vendor/gsap/index.js';
-import { RENDER, SUN, EARTH, STATES, TIMELINE } from './config.js';
-import { clamp, smoothstep, DEG } from './utils.js';
+import { RENDER, SUN, EARTH, STATES } from './config.js';
+import { clamp, smoothstep, DEG, createPerfMonitor, registerCinematicEases } from './utils.js';
 import { AssetLoader } from './assets.js';
 import { Starfield } from './starfield.js';
 import { SolarSystem } from './solar-system.js';
-import { Earth } from './earth.js';
+import { Earth, buildEarthEnvironment } from './earth.js';
 import { RegionMarker } from './region.js';
-import { Atlas } from './atlas.js';
 import { CameraDirector } from './camera-director.js';
 import { ExplorerControls } from './controls.js';
-import { SpaceDive } from './space-dive.js';
 import { UI } from './ui.js';
 
 const MODE = {
   SOLAR: 'solar',
   EXPLORE: 'explore',
   FLYING: 'flying',
-  ATLAS: 'atlas'
+  REGION: 'region'
 };
 
 class App {
@@ -27,7 +25,6 @@ class App {
     this.elapsed = 0;
     this.mode = MODE.SOLAR;
     this.started = false;
-    this.skipping = false;
     this.hoveringHotspot = false;
     this.hotspotArmed = false;
     this.raycaster = new THREE.Raycaster();
@@ -39,33 +36,27 @@ class App {
   }
 
   async init() {
+    registerCinematicEases(gsap);
+
     this.ui = new UI({
       onSelect: (category) => this.onSelect(category),
       onBack: () => this.onBack(),
-      onSkip: () => this.onSkip()
+      onEnter: () => this.onEnter()
     });
-
-    this.loaderEffect = new SpaceDive(document.getElementById('loader-scene'));
-    this.loaderEffect.start();
-
-    this.ui.setLoaderSub('Loading observatory imagery\u2026');
-    const loader = new AssetLoader((ratio) => this.ui.setProgress(ratio * 0.96));
-    this.textures = await loader.loadAll();
-    this.ui.setProgress(0.98);
 
     this.buildRenderer();
     this.buildScene();
-    this.buildWorld();
     this.bindEvents();
-    this.ui.setProgress(1);
 
-    // Compile shaders and upload textures while the loader still covers the
-    // scene, so the reveal does not inherit a first-frame stall.
-    this.renderer.compile(this.scene, this.camera);
-    this.renderer.render(this.scene, this.camera);
+    this.ui.setLoaderSub('Loading observatory imagery\u2026');
+    const loader = new AssetLoader((ratio) => this.ui.setProgress(ratio * 0.96));
+    this.textures = await loader.loadAll(this.renderer.capabilities.getMaxAnisotropy());
+    this.ui.setProgress(0.98);
+    await this.buildWorld();
+    this.ui.setProgress(1);
+    this.ui.showEnter();
 
     this.clock.start();
-    this.onEnter();
     this.loop();
   }
 
@@ -79,7 +70,7 @@ class App {
     });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDER.maxPixelRatio));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMapping = THREE.AgXToneMapping;
     this.renderer.toneMappingExposure = RENDER.exposure;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
   }
@@ -95,10 +86,10 @@ class App {
     this.scene.add(this.camera);
   }
 
-  buildWorld() {
+  async buildWorld() {
     const pixelRatio = this.renderer.getPixelRatio();
 
-    this.starfield = new Starfield(pixelRatio, this.textures['smoke.png']);
+    this.starfield = new Starfield(pixelRatio, this.textures['galaxy.webp']);
     this.scene.add(this.starfield.group);
 
     this.solar = new SolarSystem(this.textures, this.renderer);
@@ -114,7 +105,8 @@ class App {
     this.scene.add(this.hemi);
 
     const body = this.solar.planets.find((p) => p.def.key === 'earth');
-    this.earth = new Earth(this.textures, body.spin, this.solar.sunPosition);
+    const earthEnv = buildEarthEnvironment(this.renderer);
+    this.earth = new Earth(this.textures, body.spin, this.solar.sunPosition, earthEnv);
     this.earthBody = body;
     this.earthBody.tiltGroup.rotation.z = EARTH.axisTiltDeg * DEG;
     this.earth.spinAngle = EARTH.startSpinDeg * DEG;
@@ -134,10 +126,28 @@ class App {
     this.controls = new ExplorerControls(this.camera, this.canvas, this.director);
     this.controls.onUserIntent = () => this.onUserIntent();
 
-    this.atlas = new Atlas(this.camera, this.textures);
-    this.camera.add(this.atlas.group);
+    this.perfMonitor = createPerfMonitor({
+      onDownshift: () => this.downshiftQuality(),
+      onUpshift: () => this.upshiftQuality()
+    });
+    this.qualityTier = 0;
 
     this.director.apply();
+    this.scene.updateMatrixWorld(true);
+
+    if (typeof this.renderer.compileAsync === 'function') {
+      try {
+        await this.renderer.compileAsync(this.scene, this.camera);
+      } catch (error) {
+        // compileAsync can throw on driver-specific issues; fall back to a
+        // synchronous compile so the experience still boots.
+        console.warn('compileAsync failed, falling back to compile', error);
+        this.renderer.compile(this.scene, this.camera);
+      }
+    } else {
+      this.renderer.compile(this.scene, this.camera);
+    }
+
     this.ui.setReadoutState(`01 \u00b7 ${STATES.SOLAR_SYSTEM.name}`);
   }
 
@@ -167,20 +177,26 @@ class App {
     this.region.setPixelRatio(ratio);
   }
 
+  downshiftQuality() {
+    if (this.qualityTier >= 1) return;
+    this.qualityTier = 1;
+    this.earth.applyLOD({ surfaceSegments: [96, 64], cloudSegments: [48, 28] });
+    this.starfield.applyShellCounts([900, 750, 500]);
+    console.info('quality: downshifted to tier 1');
+  }
+
+  upshiftQuality() {
+    if (this.qualityTier <= 0) return;
+    this.qualityTier = 0;
+    this.earth.applyLOD({ surfaceSegments: [160, 96], cloudSegments: [96, 48] });
+    this.starfield.applyShellCounts([1300, 1100, 750]);
+    console.info('quality: upshifted to tier 0');
+  }
+
   onEnter() {
     if (this.started) return;
     this.started = true;
-    if (this.loaderEffect) this.loaderEffect.boost(2.4);
-    const fade = this.ui.dismissLoader();
-    if (fade && fade.then) {
-      fade.then(() => {
-        if (this.loaderEffect) this.loaderEffect.stop();
-        this.ui.scheduleVeilNoise();
-      });
-    } else if (this.loaderEffect) {
-      this.loaderEffect.stop();
-      this.ui.scheduleVeilNoise();
-    }
+    this.ui.dismissLoader();
     this.ui.setPanelEnabled(true);
     this.controls.setEnabled(true);
     this.director.introDolly(5.2);
@@ -198,23 +214,16 @@ class App {
     this.mode = MODE.FLYING;
     this.hotspotArmed = false;
     this.region.setHover(0);
-    this.ui.showSkip();
     this.director.beginFlight(() => this.onFlightComplete());
-    const speed = TIMELINE.speed || 1;
-    window.setTimeout(() => this.ui.hidePanel(1.6 / speed), 1700 / speed);
+    window.setTimeout(() => this.ui.hidePanel(1.6), 1700);
   }
 
   onFlightComplete() {
-    this.mode = MODE.ATLAS;
-    this.skipping = false;
-    this.hotspotArmed = false;
-    this.region.setHover(0);
-    this.ui.setAnchor(0, 0, false);
+    this.mode = MODE.REGION;
     this.ui.hideSelectionNote();
-    this.ui.hideSkip();
     this.ui.showDestination();
-    this.controls.setEnabled(false);
-    this.ui.showHint("Cox's Bazar \u00b7 listening arrives in a later phase", 6.5);
+    this.ui.showHint('Region available \u00b7 listening arrives in a later phase', 6.5);
+    this.hotspotArmed = true;
   }
 
   onBack() {
@@ -225,11 +234,8 @@ class App {
     this.ui.hideDestination(0.8);
     this.ui.hideSelectionNote();
     this.ui.setPanelEnabled(false);
-    this.ui.setAnchor(0, 0, false);
-    this.director.exitAtlas(() => {
+    this.director.returnToSolarSystem(() => {
       this.mode = MODE.SOLAR;
-      this.skipping = false;
-      this.controls.setEnabled(true);
       this.ui.setActiveCategory(null);
       this.ui.showPanel(1.4);
       this.ui.setPanelEnabled(true);
@@ -237,30 +243,11 @@ class App {
     });
   }
 
-  onSkip() {
-    if (!this.started || this.skipping || this.mode !== MODE.FLYING) return;
-    this.skipping = true;
-    this.mode = MODE.FLYING;
-    this.hotspotArmed = false;
-    this.hoveringHotspot = false;
-    this.region.setHover(0);
-    this.ui.setAnchor(0, 0, false);
-    this.ui.hidePanel(0.4);
-    this.ui.hideSelectionNote();
-    this.ui.setPanelEnabled(false);
-    this.ui.hideSkip(0.3);
-    this.controls.setEnabled(false);
-    document.body.classList.remove('grab', 'pointing');
-    this.ui.showHint("Skipping to Cox's Bazar", 2.2);
-    this.director.skipToRegion(() => this.onFlightComplete());
-  }
-
   onUserIntent() {
     if (this.mode !== MODE.FLYING) return;
     if (!this.director.interrupt()) return;
     const near = this.director.rig.dist < 6;
     this.mode = near ? MODE.EXPLORE : MODE.SOLAR;
-    this.ui.hideSkip();
     this.ui.hideSelectionNote();
     this.ui.showPanel(1.2);
     this.ui.setPanelEnabled(true);
@@ -274,14 +261,7 @@ class App {
       this.hotspotArmed = false;
       this.ui.hidePanel(1.4);
     }
-    if (state === STATES.CONTINENT) {
-      // From here on the camera is inside a flat map: dragging and zooming have
-      // nothing to act on, so input stays inert until Back.
-      this.hotspotArmed = false;
-      this.region.setHover(0);
-      this.ui.setAnchor(0, 0, false);
-      this.controls.setEnabled(false);
-    }
+    if (state === STATES.REGION_HOTSPOT) this.region.triggerPulse(0.9);
   }
 
   onPointerMove(event) {
@@ -290,13 +270,12 @@ class App {
       -(event.clientY / window.innerHeight) * 2 + 1
     );
     this.pointerInside = true;
-    const grabbable = this.mode === MODE.SOLAR || this.mode === MODE.EXPLORE;
-    document.body.classList.toggle('grab', grabbable && !this.hoveringHotspot);
+    document.body.classList.toggle('grab', this.mode !== MODE.FLYING && !this.hoveringHotspot);
   }
 
   onKey(event) {
     if (!this.started) return;
-    if (event.key === 'Escape' && (this.mode === MODE.ATLAS || this.mode === MODE.EXPLORE)) {
+    if (event.key === 'Escape' && (this.mode === MODE.REGION || this.mode === MODE.EXPLORE)) {
       this.onBack();
     }
   }
@@ -324,21 +303,26 @@ class App {
       { punch: 0 },
       { punch: 1, duration: 0.5, ease: 'power2.out', yoyo: true, repeat: 1 }
     );
-    if (this.mode === MODE.ATLAS) {
-      return;
+    if (this.mode === MODE.REGION) {
+      gsap.to(this.director.rig, {
+        dist: 1.15,
+        duration: 1.5,
+        ease: 'power2.out',
+        onComplete: () => {
+          gsap.to(this.director.rig, { dist: 1.25, duration: 2.6, ease: 'power2.inOut' });
+        }
+      });
+    } else {
+      this.mode = MODE.FLYING;
+      this.ui.setPanelEnabled(false);
+      this.ui.hideSelectionNote();
+      this.ui.hidePanel(1.1);
+      this.director.continueToRegion(() => {
+        this.mode = MODE.REGION;
+        this.hotspotArmed = true;
+        this.ui.showDestination();
+      });
     }
-    this.mode = MODE.FLYING;
-    this.ui.setPanelEnabled(false);
-    this.ui.hideSelectionNote();
-    this.ui.hidePanel(1.1);
-    this.ui.showSkip();
-    this.director.continueToRegion(() => {
-      this.mode = MODE.ATLAS;
-      this.hotspotArmed = false;
-      this.ui.hideSkip();
-      this.ui.showDestination();
-      this.controls.setEnabled(false);
-    });
   }
 
   enterExplore() {
@@ -346,21 +330,10 @@ class App {
     this.hotspotArmed = true;
     this.director.enterFreeOrbit({ keepAz: true, dist: 3.5, elDeg: 19, fov: 42, focus: 0.85 });
     this.ui.setPanelEnabled(false);
-    this.ui.showHint('Explore the globe \u00b7 find Cox\u2019s Bazar', 6.5);
+    this.ui.showHint('Explore the globe \u00b7 find the Bay of Bengal', 6.5);
   }
 
   updateHotspot(delta) {
-    if (this.director.atlasVisible) {
-      if (this.hoveringHotspot) {
-        this.hoveringHotspot = false;
-        this.region.setHover(0);
-        document.body.classList.remove('pointing');
-      }
-      this.ui.setAnchor(0, 0, false);
-      this.region.update(delta, this.elapsed, this.camera, 0);
-      return;
-    }
-
     const rigDist = this.director.rig.dist;
     const distanceFactor = smoothstep(9, 4, rigDist);
     const facing = this.region.facingScore(this.camera.position);
@@ -379,8 +352,7 @@ class App {
       this.hoveringHotspot = hovered;
       this.region.setHover(hovered ? 1 : 0);
       document.body.classList.toggle('pointing', hovered);
-      const grabbable = this.mode === MODE.SOLAR || this.mode === MODE.EXPLORE;
-      document.body.classList.toggle('grab', !hovered && grabbable);
+      document.body.classList.toggle('grab', !hovered && this.mode !== MODE.FLYING);
     }
 
     this.region.update(delta, this.elapsed, this.camera, visibility * (0.3 + 0.7 * facingFactor));
@@ -423,9 +395,9 @@ class App {
 
     this.controls.update(delta);
     this.director.apply();
-    this.atlas.sync([this.director.atlasA, this.director.atlasB]);
-    this.atlas.update();
     this.scene.updateMatrixWorld(true);
+
+    if (this.started) this.perfMonitor.sample(delta);
 
     this.updateHotspot(delta);
     this.starfield.update(this.elapsed, this.camera);
