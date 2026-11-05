@@ -53,23 +53,28 @@ state; the only server responsibility is delivering bytes with correct MIME type
 director needs a fully built world, and the director is what drives the intro.
 
 ```text
-new UI(handlers)                 wire DOM callbacks (select, back, enter)
+new UI(handlers)                 wire DOM callbacks (select, back, skip)
+SpaceDive.start()                WebGL2 dive behind the loader text
+AssetLoader.loadAll()            await all textures, report progress
 buildRenderer()                  WebGLRenderer, ACES tone mapping, sRGB output
 buildScene()                     Scene + PerspectiveCamera (added to scene)
-bindEvents()                     resize, pointer, click, keydown
-AssetLoader.loadAll()            await all textures, report progress
 buildWorld()                     starfield, solar system, lights, earth, region
   └── CameraDirector(...)        computes framing, owns the rig
       └── ExplorerControls(...)  input, attached to the same canvas
       └── Atlas(...)             flat-map plates, parented to the camera
-director.apply()                 place the camera before the first frame
-ui.showEnter()                   enable the "Enter the observatory" button
+  └── director.apply()           place the camera before the first frame
+bindEvents()                     resize, pointer, click, keydown
+renderer.compile(); render()     warm shaders/textures behind the loader
+onEnter()                        boost the dive, fade the loader, start intro
 clock.start(); loop()            animation begins
 ```
 
 Textures are loaded **before** the world is built. Modules therefore receive a
 plain `textures` map rather than performing their own async loading. If you add a
 texture, register it in `src/assets.js`, not in the consuming module.
+
+The loader auto-reveals when loading finishes; there is no Enter button.
+`SpaceDive` runs only during loading and its GL context is disposed after the fade.
 
 The app instance is exposed as `window.__jukebox` for debugging.
 
@@ -83,6 +88,7 @@ The app instance is exposed as `window.__jukebox` for debugging.
 | `src/config.js` | All tuning constants: render, sun, planets, Earth, clouds, atmosphere, region, states, timelines, categories | — |
 | `src/utils.js` | Math and DOM-canvas helpers, spherical conversions, seeded RNG | three |
 | `src/assets.js` | Texture manifest and loading, progress callbacks, derived roughness map | three, config |
+| `src/space-dive.js` | Loading-screen WebGL2 dive; starts before textures, disposed after the reveal | — |
 | `src/starfield.js` | Baked nebula sky, star shells, parallax response to camera | three, utils |
 | `src/sun.js` | Procedural sun: baked noise, surface shader, glow, rays, flares | three, utils |
 | `src/solar-system.js` | Sun placement, planet orbits and spins, Saturn ring, orbit lines, corona | three, config, sun |
@@ -302,7 +308,7 @@ Overlay elements in `index.html`, back to front:
 #destination      region card (Listen disabled in Phase 2 alpha)
 #backbar          return control
 #hint             transient messages
-#loader           progress + entry gate
+#loader           progress + space-dive reveal
 ```
 
 Body classes `grab`, `grabbing`, and `pointing` are the cursor contract: `main.js`

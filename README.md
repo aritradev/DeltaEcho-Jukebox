@@ -66,6 +66,7 @@ repository root, rejects traversal outside it, sets content types, and sends
 │   ├── atlas.js            Flat map stage: camera-attached plates, window math
 │   ├── camera-director.js  Keyframed camera states and transitions
 │   ├── controls.js         Drag-to-rotate and scroll-to-zoom input
+│   ├── space-dive.js       WebGL2 dive effect for the loading screen
 │   └── ui.js               DOM bindings: loader, panel, readout, destination card
 ├── assets/textures/        20 texture images (17 currently referenced)
 └── vendor/
@@ -79,11 +80,15 @@ repository root, rejects traversal outside it, sets content types, and sends
 
 `src/main.js` owns an `App` class that wires everything together:
 
-1. Build the renderer, scene, and camera.
+1. Start the `SpaceDive` WebGL2 effect behind the loader text.
 2. Load all textures through `AssetLoader`, reporting progress to the loader overlay.
-3. Construct the world: starfield, solar system, Earth, region marker.
+3. Build the renderer, scene, camera, and world: starfield, solar system, Earth, region marker.
 4. Create the `CameraDirector`, which owns the camera timeline.
-5. Start the animation loop, advancing planetary motion, shaders, and the director.
+5. Warm shaders and textures with one render while the loader is still opaque.
+6. Auto-reveal: boost the dive, fade the loader, dispose its GL context, and start the intro.
+7. Run the animation loop, advancing planetary motion, shaders, and the director.
+
+There is no Enter button; the app reveals itself as soon as the textures are ready.
 
 ### Camera states
 

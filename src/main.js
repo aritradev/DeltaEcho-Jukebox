@@ -10,6 +10,7 @@ import { RegionMarker } from './region.js';
 import { Atlas } from './atlas.js';
 import { CameraDirector } from './camera-director.js';
 import { ExplorerControls } from './controls.js';
+import { SpaceDive } from './space-dive.js';
 import { UI } from './ui.js';
 
 const MODE = {
@@ -41,23 +42,30 @@ class App {
     this.ui = new UI({
       onSelect: (category) => this.onSelect(category),
       onBack: () => this.onBack(),
-      onEnter: () => this.onEnter(),
       onSkip: () => this.onSkip()
     });
 
-    this.buildRenderer();
-    this.buildScene();
-    this.bindEvents();
+    this.loaderEffect = new SpaceDive(document.getElementById('loader-scene'));
+    this.loaderEffect.start();
 
     this.ui.setLoaderSub('Loading observatory imagery\u2026');
     const loader = new AssetLoader((ratio) => this.ui.setProgress(ratio * 0.96));
     this.textures = await loader.loadAll();
     this.ui.setProgress(0.98);
+
+    this.buildRenderer();
+    this.buildScene();
     this.buildWorld();
+    this.bindEvents();
     this.ui.setProgress(1);
-    this.ui.showEnter();
+
+    // Compile shaders and upload textures while the loader still covers the
+    // scene, so the reveal does not inherit a first-frame stall.
+    this.renderer.compile(this.scene, this.camera);
+    this.renderer.render(this.scene, this.camera);
 
     this.clock.start();
+    this.onEnter();
     this.loop();
   }
 
@@ -162,7 +170,17 @@ class App {
   onEnter() {
     if (this.started) return;
     this.started = true;
-    this.ui.dismissLoader();
+    if (this.loaderEffect) this.loaderEffect.boost(2.4);
+    const fade = this.ui.dismissLoader();
+    if (fade && fade.then) {
+      fade.then(() => {
+        if (this.loaderEffect) this.loaderEffect.stop();
+        this.ui.scheduleVeilNoise();
+      });
+    } else if (this.loaderEffect) {
+      this.loaderEffect.stop();
+      this.ui.scheduleVeilNoise();
+    }
     this.ui.setPanelEnabled(true);
     this.controls.setEnabled(true);
     this.director.introDolly(5.2);

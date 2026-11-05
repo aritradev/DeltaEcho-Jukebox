@@ -8,7 +8,6 @@ export class UI {
       loader: document.getElementById('loader'),
       loaderSub: document.getElementById('loader-sub'),
       loaderFill: document.getElementById('loader-fill'),
-      enterBtn: document.getElementById('enter-btn'),
       masthead: document.getElementById('masthead'),
       readout: document.getElementById('readout'),
       roState: document.getElementById('ro-state'),
@@ -31,9 +30,10 @@ export class UI {
 
     this.anchorVisible = false;
     this.hintTimer = null;
+    this.veilNoiseReady = false;
+    this.veilNoiseScheduled = false;
     this.buildChoices();
     this.bind();
-    this.makeVeilNoise();
   }
 
   buildChoices() {
@@ -51,11 +51,29 @@ export class UI {
   bind() {
     this.el.placeBtn.addEventListener('click', () => this.handlers.onSelect(null));
     this.el.backBtn.addEventListener('click', () => this.handlers.onBack());
-    this.el.enterBtn.addEventListener('click', () => this.handlers.onEnter());
     this.el.skipBtn.addEventListener('click', () => this.handlers.onSkip());
   }
 
+  // Building the veil noise is only needed once a flight starts, and it is
+  // expensive enough to stall a frame. Keep it off the startup path and bake it
+  // during idle after the reveal instead.
+  scheduleVeilNoise() {
+    if (this.veilNoiseReady || this.veilNoiseScheduled) return;
+    this.veilNoiseScheduled = true;
+    const run = () => {
+      this.veilNoiseScheduled = false;
+      this.makeVeilNoise();
+    };
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(run, { timeout: 2500 });
+    } else {
+      window.setTimeout(run, 800);
+    }
+  }
+
   makeVeilNoise() {
+    if (this.veilNoiseReady) return;
+    this.veilNoiseReady = true;
     const size = 340;
     const canvas = document.createElement('canvas');
     canvas.width = size;
@@ -99,13 +117,6 @@ export class UI {
 
   setLoaderSub(text) {
     this.el.loaderSub.textContent = text;
-  }
-
-  showEnter() {
-    this.el.loaderSub.textContent = 'Observatory ready';
-    this.el.loaderFill.style.width = '100%';
-    this.el.enterBtn.disabled = false;
-    gsap.fromTo(this.el.enterBtn, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out' });
   }
 
   dismissLoader() {
@@ -204,6 +215,7 @@ export class UI {
   }
 
   setVeil(value) {
+    if (value > 0 && !this.veilNoiseReady && !this.veilNoiseScheduled) this.makeVeilNoise();
     this.el.veil.style.opacity = String(value);
     this.el.veilNoise.style.opacity = String(value * 0.16);
   }
