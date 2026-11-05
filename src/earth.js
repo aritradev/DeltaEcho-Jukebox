@@ -1,155 +1,43 @@
 import * as THREE from 'three';
 import { EARTH, CLOUDS, ATMOSPHERE } from './config.js';
-import { DEG, clamp, smoothstep, createCanvas, canvasTexture } from './utils.js';
+import { DEG, clamp, smoothstep } from './utils.js';
 
-/**
- * Tiny equirectangular gradient that PMREMGenerator will mip-blur into a
- * usable ambient cube. Cool sky on top, deep space on the bottom, a soft
- * horizon wash — gives Earth a believable specular lift without needing
- * an HDR.
- */
-function buildEnvEquirect() {
-  const w = 64;
-  const h = 32;
-  const canvas = createCanvas(w, h);
-  const ctx = canvas.getContext('2d');
-  const image = ctx.createImageData(w, h);
-  for (let y = 0; y < h; y += 1) {
-    const v = y / (h - 1);
-    const r = v < 0.5 ? 0.06 + (0.5 - v) * 0.18 : 0.03;
-    const g = v < 0.5 ? 0.10 + (0.5 - v) * 0.32 : 0.04;
-    const b = v < 0.5 ? 0.20 + (0.5 - v) * 0.55 : 0.06;
-    for (let x = 0; x < w; x += 1) {
-      const i = (y * w + x) * 4;
-      const horizon = 1 - Math.abs(v - 0.5) * 2;
-      image.data[i] = Math.round((r + horizon * 0.05) * 255);
-      image.data[i + 1] = Math.round((g + horizon * 0.04) * 255);
-      image.data[i + 2] = Math.round((b + horizon * 0.02) * 255);
-      image.data[i + 3] = 255;
-    }
-  }
-  ctx.putImageData(image, 0, 0);
-  const tex = canvasTexture(canvas, { srgb: true, repeatX: true });
-  tex.mapping = THREE.EquirectangularReflectionMapping;
-  return tex;
+const NIGHT_VERT = `
+varying vec2 vUv;
+varying vec3 vNormalW;
+varying vec3 vWorldPos;
+void main() {
+  vUv = uv;
+  vNormalW = normalize(mat3(modelMatrix) * normal);
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vWorldPos = wp.xyz;
+  gl_Position = projectionMatrix * viewMatrix * wp;
 }
+`;
 
-export function buildEarthEnvironment(renderer) {
-  const equirect = buildEnvEquirect();
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileEquirectangularShader();
-  const envMap = pmrem.fromEquirectangular(equirect).texture;
-  equirect.dispose();
-  pmrem.dispose();
-  return envMap;
+const NIGHT_FRAG = `
+uniform sampler2D uMap;
+uniform vec3 uSunPos;
+uniform float uOpacity;
+varying vec2 vUv;
+varying vec3 vNormalW;
+varying vec3 vWorldPos;
+void main() {
+  vec3 L = normalize(uSunPos - vWorldPos);
+  float ndl = dot(normalize(vNormalW), L);
+  float night = smoothstep(0.18, -0.22, ndl);
+  vec3 tex = texture2D(uMap, vUv).rgb;
+  float lights = max(tex.r, tex.g);
+  lights = smoothstep(0.012, 0.075, lights);
+  lights = lights * lights * (0.45 + 0.55 * lights);
+  vec3 warm = mix(vec3(1.0, 0.74, 0.42), vec3(1.0, 0.9, 0.72), lights);
+  float a = lights * night * uOpacity;
+  if (a < 0.003) discard;
+  gl_FragColor = vec4(warm * a, a);
 }
+`;
 
-/* ------------------------------------------------------------------------- */
-/*  Surface                                                                  */
-/* ------------------------------------------------------------------------- */
-
-/**
- * NASA Eyes-style photoreal Earth surface.
- *
- *   - Day-side image is the hero. We use MeshStandardMaterial (PBR) so
- *     PMREM env + normal map + roughness combine into a believable ocean.
- *   - Twilight is a soft, low-amplitude warm shift blended over the day
- *     map. No animated FBM stripes (Tier 2.1 looked "printed"); the band
- *     is purely a terminator falloff.
- *   - Night-side city lights are blended into the *surface* itself
- *     (instead of an additive shell) so cities don't pop as a separate
- *     layer and never "leak" past the day terminator.
- *   - A subtle "limb darkening" darkens the very edge of the visible disc
- *     to imply atmospheric scattering without a separate sphere.
- */
-function buildSurfaceShader(surfaceUniforms) {
-  // Three.js calls this as onBeforeCompile(shader, renderer). The first
-  // argument is the shader parameters object (with .uniforms, .vertexShader,
-  // .fragmentShader) — *not* the material. The earlier (material, shader)
-  // signature caused compileAsync to throw on `shader.uniforms` because the
-  // renderer object has no such property.
-  return function patch(shader) {
-    shader.uniforms.uSunDir = surfaceUniforms.uSunDir;
-    shader.uniforms.uNightMap = surfaceUniforms.uNightMap;
-    shader.uniforms.uNightStrength = surfaceUniforms.uNightStrength;
-    shader.uniforms.uTwilightStrength = surfaceUniforms.uTwilightStrength;
-
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        '#include <common>',
-        `#include <common>
-         varying vec3 vEarthWorldPos;
-         varying vec2 vEarthUv;`
-      )
-      .replace(
-        '#include <fog_vertex>',
-        `#include <fog_vertex>
-         vEarthWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
-         vEarthUv = uv;`
-      );
-
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        '#include <common>',
-        `#include <common>
-         uniform vec3 uSunDir;
-         uniform sampler2D uNightMap;
-         uniform float uNightStrength;
-         uniform float uTwilightStrength;
-         varying vec3 vEarthWorldPos;
-         varying vec2 vEarthUv;`
-      )
-      .replace(
-        '#include <dithering_fragment>',
-        `#include <dithering_fragment>
-
-         vec3 N_s = normalize(vEarthWorldPos);
-         vec3 L_s = normalize(uSunDir);
-         float ndl_s = dot(N_s, L_s);
-
-         /* ------------------------------------------------------------------
-          * Limb darkening: a smooth falloff toward the visible edge of the
-          * disc. Sells the atmosphere by darkening the grazing-angle pixels
-          * instead of fading them to black.
-          * ------------------------------------------------------------------ */
-         vec3 V_s = normalize(cameraPosition - vEarthWorldPos);
-         float mu = clamp(dot(N_s, V_s), 0.0, 1.0);
-         float limb = smoothstep(0.0, 0.55, mu);
-         gl_FragColor.rgb *= mix(0.62, 1.0, limb);
-
-         /* ------------------------------------------------------------------
-          * Twilight band: a single, very subtle warm shift over the
-          * terminator. No procedural noise, no animated flicker — just a
-          * smooth cosine weighting centred at ndl = 0.
-          * ------------------------------------------------------------------ */
-         float twiBand = pow(clamp(1.0 - abs(ndl_s) * 1.6, 0.0, 1.0), 2.2);
-         vec3 warm = vec3(1.0, 0.74, 0.50);
-         gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * warm, twiBand * uTwilightStrength);
-
-         /* ------------------------------------------------------------------
-          * Night-side city lights: blended into the *surface*, weighted
-          * by (1 - day) so they never bleed into the day side. Suppressed
-          * near the visible limb to avoid the "halo" artefact.
-          * ------------------------------------------------------------------ */
-         vec3 lights = texture2D(uNightMap, vEarthUv).rgb;
-         float lum = max(max(lights.r, lights.g), lights.b);
-         lum = smoothstep(0.025, 0.18, lum);
-         // Night mask: 0 on the day side (ndl_s positive), 1 on the night side.
-         // smoothstep with edge0 < edge1 is well-defined. The hard step() on
-         // ndl_s > 0 is a belt-and-suspenders guard — even if smoothstep
-         // somehow returned the wrong value, the day side will still be 0.
-         float nightMask = smoothstep(0.05, -0.08, ndl_s) * step(0.0, -ndl_s);
-         float lights_a = lum * nightMask * limb * uNightStrength;
-         gl_FragColor.rgb += lights * lights_a * 1.3;`
-      );
-  };
-}
-
-/* ------------------------------------------------------------------------- */
-/*  Atmosphere                                                                */
-/* ------------------------------------------------------------------------- */
-
-const ATMO_VERT = /* glsl */`
+const ATMO_VERT = `
 varying vec3 vNormalW;
 varying vec3 vWorldPos;
 void main() {
@@ -160,109 +48,81 @@ void main() {
 }
 `;
 
-/**
- * Single-shell Rayleigh-ish scattering model.
- *
- *   - The rim glow is a Schlick-style fresnel weighted by sun illumination
- *     so it dies on the night side and blooms on the day side.
- *   - Forward scatter (Mie-ish) gives a soft sun-side halo without a
- *     second shell.
- *   - The twilight tint is just a muted warm shift in the terminator band;
- *     no animated FBM, no separate sphere.
- */
-const ATMO_FRAG = /* glsl */`
+const ATMO_FRAG = `
 uniform vec3 uSunPos;
 uniform float uIntensity;
 uniform float uPower;
+uniform float uDayBias;
 varying vec3 vNormalW;
 varying vec3 vWorldPos;
-
-const vec3 RAYLEIGH = vec3(0.16, 0.42, 0.95);
-const vec3 TWILIGHT = vec3(1.0, 0.66, 0.36);
-const vec3 HIGHLIGHT = vec3(0.74, 0.86, 1.0);
-
 void main() {
   vec3 N = normalize(vNormalW);
   vec3 V = normalize(cameraPosition - vWorldPos);
   vec3 L = normalize(uSunPos - vWorldPos);
   float ndl = dot(N, L);
-  float ndv = abs(dot(N, V));
-
-  // Day / night envelope.
-  float lit = smoothstep(-0.55, 0.20, ndl);
-
-  // Schlick-style fresnel for the rim.
-  float fres = pow(1.0 - ndv, uPower);
-
-  // Forward (Mie) scatter: brightest near the sun direction.
-  float forward = pow(clamp(dot(V, -L), 0.0, 1.0), 6.0);
-
-  // Twilight tint at the terminator, blended with day colour.
-  float term = pow(clamp(1.0 - abs(ndl) * 1.9, 0.0, 1.0), 1.8);
-  vec3 base = mix(RAYLEIGH, HIGHLIGHT, smoothstep(-0.10, 0.55, ndl));
-  vec3 col = mix(base, TWILIGHT, term * 0.55);
-
-  float rimA = fres * (0.20 + 0.80 * lit);
-  float glow = forward * lit * 0.35;
-  float a = clamp((rimA + glow) * uIntensity, 0.0, 1.0);
-
-  gl_FragColor = vec4(col * (rimA + glow * 0.7) * uIntensity, a);
+  float lit = smoothstep(-0.62, 0.22, ndl);
+  float rim = pow(clamp(1.0 - abs(dot(N, V)), 0.0, 1.0), uPower);
+  float forward = pow(clamp(dot(V, -L), 0.0, 1.0), 4.0);
+  vec3 deep = vec3(0.14, 0.36, 0.92);
+  vec3 high = vec3(0.62, 0.78, 1.0);
+  vec3 sunset = vec3(1.0, 0.72, 0.45);
+  vec3 col = mix(deep, high, smoothstep(-0.15, 0.55, ndl));
+  col = mix(col, sunset, pow(clamp(1.0 - abs(ndl) * 3.4, 0.0, 1.0), 2.2) * 0.5 * uDayBias);
+  float body = rim * (0.28 + 0.72 * lit);
+  float glow = forward * lit * 0.55;
+  float a = clamp((body * 1.35 + glow) * uIntensity, 0.0, 1.0);
+  gl_FragColor = vec4(col * (body + glow * 0.7) * uIntensity, a);
 }
 `;
 
-/* ------------------------------------------------------------------------- */
-/*  Clouds                                                                   */
-/* ------------------------------------------------------------------------- */
+const HAZE_FRAG = `
+uniform vec3 uSunPos;
+uniform float uIntensity;
+uniform float uRim;
+varying vec3 vNormalW;
+varying vec3 vWorldPos;
+void main() {
+  vec3 N = normalize(vNormalW);
+  vec3 V = normalize(cameraPosition - vWorldPos);
+  vec3 L = normalize(uSunPos - vWorldPos);
+  float ndl = dot(N, L);
+  float lit = smoothstep(-0.35, 0.35, ndl);
+  float rim = pow(clamp(1.0 - abs(dot(N, V)), 0.0, 1.0), uRim);
+  float a = rim * lit * uIntensity;
+  vec3 col = mix(vec3(0.2, 0.44, 0.95), vec3(0.78, 0.86, 1.0), smoothstep(0.0, 0.6, ndl));
+  gl_FragColor = vec4(col * a, a);
+}
+`;
 
-const CLOUD_VERT = ATMO_VERT
-  .replace(
-    'varying vec3 vNormalW;',
-    'varying vec3 vNormalW;\nvarying vec2 vCloudUv;'
-  )
-  .replace(
-    'gl_Position = projectionMatrix * viewMatrix * wp;',
-    'vCloudUv = uv;\n  gl_Position = projectionMatrix * viewMatrix * wp;'
-  );
-
-const CLOUD_FRAG = /* glsl */`
+const CLOUD_FRAG = `
 uniform sampler2D uMap;
 uniform vec3 uSunPos;
 uniform float uOpacity;
 uniform float uEvolve;
+uniform float uDetailScale;
+uniform float uDetailMix;
+varying vec2 vUv;
 varying vec3 vNormalW;
 varying vec3 vWorldPos;
-varying vec2 vCloudUv;
-
 void main() {
-  float a = texture2D(uMap, vCloudUv).a;
-  if (a < 0.02) discard;
-
-  // Slowly scroll the cloud map along U for a gentle, never-distracting drift.
-  vec2 uv = vec2(vCloudUv.x + uEvolve, vCloudUv.y);
-  a *= texture2D(uMap, uv).a * 0.55 + a * 0.45;
-
-  vec3 N = normalize(vNormalW);
+  float base = texture2D(uMap, vUv).a;
+  float det = texture2D(uMap, vec2(vUv.x * uDetailScale + uEvolve, vUv.y)).a;
+  float cover = mix(base, max(base, det), uDetailMix);
+  float a = clamp(cover, 0.0, 1.0) * uOpacity;
+  if (a < 0.018) discard;
   vec3 L = normalize(uSunPos - vWorldPos);
-  float ndl = dot(N, L);
-  float lit = smoothstep(-0.10, 0.35, ndl);
-  // Subtle warm tint at the terminator.
-  float term = pow(clamp(1.0 - abs(ndl) * 2.2, 0.0, 1.0), 2.0);
-  vec3 col = mix(vec3(0.78, 0.84, 0.96), vec3(1.0, 0.88, 0.74), term * 0.45);
-  col *= lit;
-
-  gl_FragColor = vec4(col, clamp(a * uOpacity, 0.0, 1.0));
+  float ndl = dot(normalize(vNormalW), L);
+  float lit = smoothstep(-0.16, 0.30, ndl);
+  float term = pow(clamp(1.0 - abs(ndl) * 2.8, 0.0, 1.0), 2.0);
+  vec3 col = mix(vec3(0.84, 0.89, 0.97), vec3(1.0, 0.85, 0.66), term * 0.6);
+  gl_FragColor = vec4(col * lit, a);
 }
 `;
 
-/* ------------------------------------------------------------------------- */
-/*  Earth                                                                    */
-/* ------------------------------------------------------------------------- */
-
 export class Earth {
-  constructor(textures, spinGroup, sunPosition, envMap = null) {
+  constructor(textures, spinGroup, sunPosition) {
     this.textures = textures;
     this.sunPosition = sunPosition;
-    this.envMap = envMap;
     this.radius = EARTH.radius;
     this.spin = spinGroup;
     this.tilt = spinGroup.parent;
@@ -276,9 +136,9 @@ export class Earth {
     this._center = new THREE.Vector3();
     this._v = new THREE.Vector3();
     this._q = new THREE.Quaternion();
-    this._sunDir = new THREE.Vector3();
 
     this.buildSurface();
+    this.buildNight();
     this.buildClouds();
     this.buildAtmosphere();
   }
@@ -289,29 +149,32 @@ export class Earth {
       map: this.textures['earth_day.jpg'],
       normalMap: this.textures['earth_normal.jpg'],
       normalScale: new THREE.Vector2(0.85, 0.85),
-      roughnessMap: this.textures['earth_roughness'] || this.textures['earth_specular.jpg'],
+      roughnessMap: this.textures.earth_roughness,
       roughness: 1.0,
-      metalness: 0.0,
-      envMap: this.envMap,
-      envMapIntensity: 0.35
+      metalness: 0.0
     });
-    // Override roughnessMap wrap to repeat (asset loader already sets it).
-    if (this.surfaceMaterial.roughnessMap) {
-      this.surfaceMaterial.roughnessMap.wrapS = THREE.RepeatWrapping;
-    }
-    this.surfaceUniforms = {
-      uSunDir: { value: new THREE.Vector3(0, 0, 1) },
-      uNightMap: { value: this.textures['earth_night.jpg'] || null },
-      uNightStrength: { value: 1.0 },
-      uTwilightStrength: { value: 0.55 }
-    };
-    this.surfaceMaterial.onBeforeCompile = buildSurfaceShader(this.surfaceUniforms);
-    // v4: forces Three.js to discard any cached program compiled with the
-    // older shader source (lights on day-side bug).
-    this.surfaceMaterial.customProgramCacheKey = () => 'earth-surface-v4';
     this.surface = new THREE.Mesh(geometry, this.surfaceMaterial);
     this.surface.name = 'earth-surface';
     this.spin.add(this.surface);
+  }
+
+  buildNight() {
+    const geometry = new THREE.SphereGeometry(this.radius * EARTH.nightScale, 96, 64);
+    this.nightMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uMap: { value: this.textures['earth_night.jpg'] },
+        uSunPos: { value: this.sunPosition },
+        uOpacity: { value: 0.9 }
+      },
+      vertexShader: NIGHT_VERT,
+      fragmentShader: NIGHT_FRAG,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    this.night = new THREE.Mesh(geometry, this.nightMaterial);
+    this.night.renderOrder = 1;
+    this.spin.add(this.night);
   }
 
   buildClouds() {
@@ -325,9 +188,11 @@ export class Earth {
         uMap: { value: this.textures['earth_clouds.png'] },
         uSunPos: { value: this.sunPosition },
         uOpacity: { value: CLOUDS.opacity.solarRest },
-        uEvolve: { value: 0.0 }
+        uEvolve: { value: 0.0 },
+        uDetailScale: { value: CLOUDS.detailScale },
+        uDetailMix: { value: CLOUDS.detailMix }
       },
-      vertexShader: CLOUD_VERT,
+      vertexShader: NIGHT_VERT,
       fragmentShader: CLOUD_FRAG,
       transparent: true,
       depthWrite: false
@@ -344,7 +209,8 @@ export class Earth {
       uniforms: {
         uSunPos: { value: this.sunPosition },
         uIntensity: { value: ATMOSPHERE.intensityBase },
-        uPower: { value: ATMOSPHERE.rimPowerBase }
+        uPower: { value: ATMOSPHERE.rimPowerBase },
+        uDayBias: { value: ATMOSPHERE.dayBias }
       },
       vertexShader: ATMO_VERT,
       fragmentShader: ATMO_FRAG,
@@ -356,6 +222,23 @@ export class Earth {
     this.atmosphere = new THREE.Mesh(outer, this.atmoMaterial);
     this.atmosphere.renderOrder = 3;
     this.spin.add(this.atmosphere);
+
+    const inner = new THREE.SphereGeometry(this.radius * EARTH.atmosphereInnerScale, 96, 64);
+    this.hazeMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        uSunPos: { value: this.sunPosition },
+        uIntensity: { value: 0.0 },
+        uRim: { value: ATMOSPHERE.hazeRim }
+      },
+      vertexShader: ATMO_VERT,
+      fragmentShader: HAZE_FRAG,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    this.haze = new THREE.Mesh(inner, this.hazeMaterial);
+    this.haze.renderOrder = 4;
+    this.spin.add(this.haze);
   }
 
   setSpinRate(scale) {
@@ -381,32 +264,15 @@ export class Earth {
       (this.cloudMaterial.uniforms.uEvolve.value + delta * CLOUDS.evolveRate) % 1;
 
     const near = smoothstep(ATMOSPHERE.detailDistance, 1.15, cameraDistanceInRadii);
+    const veryNear = smoothstep(ATMOSPHERE.hazeOnsetFar, ATMOSPHERE.hazeOnsetNear, cameraDistanceInRadii);
     this.atmoMaterial.uniforms.uIntensity.value = ATMOSPHERE.intensityBase + near * ATMOSPHERE.intensityNear;
     this.atmoMaterial.uniforms.uPower.value = ATMOSPHERE.rimPowerBase + near * ATMOSPHERE.rimPowerNear;
-
-    // Push sun direction in *world* space into the surface shader.
-    this._sunDir.copy(this.sunPosition).sub(this._center);
-    if (this._sunDir.lengthSq() > 1e-8) this._sunDir.normalize();
-    this.surfaceUniforms.uSunDir.value.copy(this._sunDir);
+    this.hazeMaterial.uniforms.uIntensity.value = veryNear * ATMOSPHERE.hazeIntensity;
+    this.nightMaterial.uniforms.uOpacity.value = 0.85 + near * 0.75;
   }
 
   setNormalScale(value) {
     this.surfaceMaterial.normalScale.set(value, value);
-  }
-
-  applyLOD({ surfaceSegments, cloudSegments } = {}) {
-    if (surfaceSegments) {
-      this.surface.geometry.dispose();
-      this.surface.geometry = new THREE.SphereGeometry(this.radius, surfaceSegments[0], surfaceSegments[1]);
-    }
-    if (cloudSegments && this.clouds) {
-      this.clouds.geometry.dispose();
-      this.clouds.geometry = new THREE.SphereGeometry(
-        this.radius * CLOUDS.scale,
-        cloudSegments[0],
-        cloudSegments[1]
-      );
-    }
   }
 
   setRegionLocalDirection(vector) {

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { gsap } from '../vendor/gsap/index.js';
-import { STATES, TIMELINE, EARTH, FRAMING, CLOUDS } from './config.js';
-import { sphericalToVector3, latLonToVector3, clamp, DEG, TimelineClock } from './utils.js';
+import { STATES, TIMELINE, EARTH, FRAMING, CLOUDS, ATLAS } from './config.js';
+import { sphericalToVector3, latLonToVector3, clamp, DEG } from './utils.js';
 
 const WIDE = {
   dist: 10.8,
@@ -14,6 +14,16 @@ const WIDE = {
 };
 
 const REGION_EL = 3.2 * DEG;
+
+// One global multiplier keeps every transition in sync. Base durations live in
+// `TIMELINE`; `scaled()` converts them to runtime seconds.
+const SPEED = TIMELINE.speed || 1;
+const scaled = (seconds) => seconds / SPEED;
+const T = Object.fromEntries(
+  Object.entries(TIMELINE)
+    .filter(([key]) => key !== 'speed')
+    .map(([key, value]) => [key, value / SPEED])
+);
 
 export class CameraDirector {
   constructor(camera, earth, region) {
@@ -43,9 +53,10 @@ export class CameraDirector {
     this.coronaScale = 1;
     this.orbitLineFade = 0;
 
-    // Real-time -> local remap, used so timelines can be paused / scaled.
-    this.clock = new TimelineClock();
-    this._timelineT0 = 0;
+    const asia = ATLAS.levels.asia.start;
+    const coxs = ATLAS.levels.coxs.start;
+    this.atlasA = { u: asia.u, v: asia.v, zoom: asia.zoom, opacity: 0 };
+    this.atlasB = { u: coxs.u, v: coxs.v, zoom: coxs.zoom, opacity: 0 };
 
     this.onStateChange = null;
     this.onComplete = null;
@@ -104,6 +115,7 @@ export class CameraDirector {
   }
 
   introDolly(duration) {
+    const seconds = scaled(duration);
     return gsap.fromTo(
       this.rig,
       {
@@ -117,7 +129,7 @@ export class CameraDirector {
         fov: WIDE.fov,
         offX: WIDE.offX,
         offY: WIDE.offY,
-        duration,
+        duration: seconds,
         ease: 'power2.out'
       }
     );
@@ -163,29 +175,12 @@ export class CameraDirector {
     tl.call(() => this.setState(state), null, time);
   }
 
-  /**
-   * Convert a real-time performance.now() instant into the local timeline
-   * second used by the active GSAP timeline.  Returns 0 if no timeline is
-   * running.  This is what every `tl.to(..., {..., time})` uses internally
-   * via `tl.to(..., {..., time: T.acknowledge})`, so the remap only matters
-   * when callers ask for the current local time (e.g. UI debug overlay,
-   * future pause/resume).
-   */
-  localTime(real = performance.now() / 1000) {
-    if (!this.timeline) return 0;
-    return this.clock.toLocal(this._timelineT0, real);
-  }
-
-  buildRegionSequence(tl, time, shortened) {
+  buildRegionSequence(tl, time) {
     const rig = this.rig;
-    const T = TIMELINE;
     this.refreshRegionTilt();
     const alignAz = this.nearestAligned(rig.az, this.regionAzTilt);
-    const approach = shortened ? T.regionApproach : T.regionApproach;
-    const cloud = shortened ? T.cloudEntry : T.cloudEntry;
-    const reveal = shortened ? T.reveal : T.reveal;
-    const lock = shortened ? 0.9 : T.lock;
-    const settle = Math.max(lock, 2.2);
+    const approach = T.regionApproach;
+    const cloud = T.cloudEntry;
 
     this.scheduleState(tl, STATES.REGION_APPROACH, time);
     tl.to(rig, { dist: 1.44, duration: approach, ease: 'power2.in' }, time);
@@ -197,7 +192,7 @@ export class CameraDirector {
     tl.to(this, { spinScale: 0.55, duration: approach * 0.55, ease: 'power2.out' }, time);
     tl.to(this, { regionVisibility: 0.14, duration: approach * 0.6, ease: 'power1.in' }, time);
     tl.to(this, { cloudOpacity: CLOUDS.opacity.regionApproach, duration: approach, ease: 'power1.inOut' }, time);
-    tl.to(this, { orbitLineFade: 1, duration: 1.6 }, time);
+    tl.to(this, { orbitLineFade: 1, duration: scaled(1.6) }, time);
 
     let t = time + approach;
     this.scheduleState(tl, STATES.CLOUD_ENTRY, t);
@@ -209,24 +204,43 @@ export class CameraDirector {
     tl.to(this, { regionVisibility: 0.1, duration: cloud * 0.5, ease: 'power2.in' }, t);
 
     t += cloud;
-    this.scheduleState(tl, STATES.REGION_REVEAL, t);
-    tl.to(this, { veil: 0, duration: reveal * 0.62, ease: 'cinemaOut' }, t);
-    tl.to(this, { cloudOpacity: CLOUDS.opacity.regionReveal, duration: reveal * 0.8, ease: 'cinemaOut' }, t);
-    tl.to(this, { regionVisibility: 1, duration: reveal * 0.75, ease: 'cinemaOut' }, t);
-    tl.to(rig, { dist: 1.38, duration: reveal, ease: 'power2.out' }, t);
-    tl.to(rig, { fov: 40, duration: reveal, ease: 'power2.out' }, t);
-    tl.to(rig, { offX: -0.05, offY: 0.075, duration: reveal, ease: 'power2.out' }, t);
+    const asia = ATLAS.levels.asia;
+    const coxs = ATLAS.levels.coxs;
 
-    t += reveal;
-    this.scheduleState(tl, STATES.REGION_HOTSPOT, t);
-    tl.to(rig, { dist: 2.75, duration: settle, ease: 'power2.inOut' }, t);
-    tl.to(rig, { fov: 41, duration: settle, ease: 'power2.inOut' }, t);
-    tl.to(rig, { focus: 0.32, duration: settle, ease: 'power2.inOut' }, t);
-    tl.to(rig, { offX: -0.02, offY: 0.03, duration: settle, ease: 'power2.inOut' }, t);
-    tl.to(this, { cloudOpacity: CLOUDS.opacity.regionHotspot, duration: lock, ease: 'power2.out' }, t);
-    tl.to(this, { spinScale: 0.55, duration: lock, ease: 'power1.out' }, t);
+    // The veil is still up from cloud entry: the globe hands over to the flat
+    // Asia map underneath it, so the swap is never seen.
+    this.scheduleState(tl, STATES.CONTINENT, t);
+    tl.set(this.atlasA, { u: asia.start.u, v: asia.start.v, zoom: asia.start.zoom }, t);
+    tl.set(this.atlasB, { opacity: 0 }, t);
+    tl.to(this.atlasA, { opacity: 1, duration: T.continent * 0.5, ease: 'power2.out' }, t);
+    tl.to(this.atlasA, { zoom: asia.start.zoom * 1.15, duration: T.continent, ease: 'sine.inOut' }, t);
+    tl.to(this, { veil: 0, duration: T.continent * 0.78, ease: 'power2.out' }, t);
+    tl.to(this, { cloudOpacity: CLOUDS.opacity.regionReveal, duration: T.continent * 0.7, ease: 'power1.out' }, t);
 
-    return t + settle;
+    t += T.continent;
+    this.scheduleState(tl, STATES.COUNTRY, t);
+    tl.to(this.atlasA, { u: asia.end.u, v: asia.end.v, duration: T.country, ease: 'power3.out' }, t);
+    tl.to(this.atlasA, { zoom: asia.end.zoom, duration: T.country, ease: 'power2.inOut' }, t);
+
+    // Bangladesh dissolves into the beach: the incoming plate fades up while the
+    // outgoing one keeps diving, so the jump in scale reads as a fall, not a cut.
+    t += T.country;
+    tl.set(this.atlasB, { u: coxs.start.u, v: coxs.start.v, zoom: coxs.start.zoom }, t);
+    tl.to(this.atlasB, { opacity: 1, duration: T.dissolve, ease: 'power2.inOut' }, t);
+    tl.to(this.atlasA, { opacity: 0, duration: T.dissolve * 0.8, ease: 'power2.in' }, t + T.dissolve * 0.2);
+    tl.to(this.atlasA, { zoom: asia.end.zoom * 1.4, duration: T.dissolve, ease: 'power2.in' }, t);
+    tl.to(this, { veil: 0.34, duration: T.dissolve * 0.45, ease: 'power2.in' }, t);
+    tl.to(this, { veil: 0, duration: T.dissolve * 0.8, ease: 'power2.out' }, t + T.dissolve * 0.45);
+
+    t += T.dissolve;
+    this.scheduleState(tl, STATES.LOCALITY, t);
+    tl.to(
+      this.atlasB,
+      { u: coxs.end.u, v: coxs.end.v, zoom: coxs.end.zoom, duration: T.locality, ease: 'power2.out' },
+      t
+    );
+
+    return t + T.locality;
   }
 
   beginFlight(onComplete) {
@@ -235,12 +249,9 @@ export class CameraDirector {
     this.pendingComplete = onComplete || null;
 
     const rig = this.rig;
-    const T = TIMELINE;
     this.refreshRegionTilt();
     const startAz = rig.az;
     const orbitAz = this.nearestAligned(startAz, this.regionAzTilt + 0.3);
-
-    this._timelineT0 = performance.now() / 1000;
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -266,16 +277,16 @@ export class CameraDirector {
 
     let t = t0 + T.approach;
     this.scheduleState(tl, STATES.EARTH_ORBIT, t);
-    tl.to(rig, { dist: 2.7, duration: T.orbit, ease: 'cinemaInOut' }, t);
-    tl.to(rig, { az: orbitAz, duration: T.orbit, ease: 'cinemaInOut' }, t);
-    tl.to(rig, { el: 15 * DEG, duration: T.orbit, ease: 'cinemaInOut' }, t);
-    tl.to(rig, { fov: 40, duration: T.orbit, ease: 'cinemaInOut' }, t);
-    tl.to(rig, { focus: 0.85, duration: T.orbit, ease: 'cinemaInOut' }, t);
-    tl.to(rig, { offX: 0, offY: 0.022, duration: T.orbit, ease: 'cinemaInOut' }, t);
+    tl.to(rig, { dist: 2.7, duration: T.orbit, ease: 'power2.inOut' }, t);
+    tl.to(rig, { az: orbitAz, duration: T.orbit, ease: 'power2.inOut' }, t);
+    tl.to(rig, { el: 15 * DEG, duration: T.orbit, ease: 'power2.inOut' }, t);
+    tl.to(rig, { fov: 40, duration: T.orbit, ease: 'power2.inOut' }, t);
+    tl.to(rig, { focus: 0.85, duration: T.orbit, ease: 'power2.inOut' }, t);
+    tl.to(rig, { offX: 0, offY: 0.022, duration: T.orbit, ease: 'power2.inOut' }, t);
     tl.to(this, { cloudOpacity: CLOUDS.opacity.earthOrbit, duration: T.orbit, ease: 'power1.inOut' }, t);
     tl.to(this, { spinScale: 0.55, duration: T.orbit * 0.5, ease: 'power2.out' }, t + T.orbit * 0.2);
 
-    this.buildRegionSequence(tl, t + T.orbit, false);
+    this.buildRegionSequence(tl, t + T.orbit);
 
     this.timeline = tl;
     return tl;
@@ -285,7 +296,6 @@ export class CameraDirector {
     this.killTimeline();
     this.locked = true;
     this.pendingComplete = onComplete || null;
-    this._timelineT0 = performance.now() / 1000;
     const tl = gsap.timeline({
       onComplete: () => {
         this.timeline = null;
@@ -295,16 +305,62 @@ export class CameraDirector {
         if (fn) fn();
       }
     });
-    this.buildRegionSequence(tl, 0, true);
+    this.buildRegionSequence(tl, 0);
     this.timeline = tl;
     return tl;
+  }
+
+  // Abandons whatever is playing and cuts straight to the end of the region
+  // sequence: the flat beach map, fully zoomed. The veil flashes once so the
+  // jump reads as a deliberate cut rather than a glitch, then fades to reveal
+  // the destination. `onComplete` fires when the reveal is visible.
+  skipToRegion(onComplete) {
+    this.killTimeline();
+    this.locked = false;
+    this.pendingComplete = null;
+    this.refreshRegionTilt();
+
+    const coxs = ATLAS.levels.coxs;
+    const rig = this.rig;
+    rig.dist = 1.052;
+    rig.az = this.regionAzTilt;
+    rig.el = this.regionElTilt + REGION_EL;
+    rig.fov = 53;
+    rig.focus = 1;
+    rig.offX = 0;
+    rig.offY = 0.03;
+
+    this.spinScale = 0.55;
+    this.regionVisibility = 0.1;
+    this.cloudOpacity = CLOUDS.opacity.regionReveal;
+    this.orbitLineFade = 1;
+    this.coronaScale = 0.85;
+
+    // Only the beach plate is up at the end of the sequence; the Asia plate has
+    // already faded out beneath it.
+    this.atlasA.opacity = 0;
+    this.atlasB.u = coxs.end.u;
+    this.atlasB.v = coxs.end.v;
+    this.atlasB.zoom = coxs.end.zoom;
+    this.atlasB.opacity = 1;
+
+    this.setState(STATES.LOCALITY);
+    this.veil = 0.85;
+    return gsap.to(this, {
+      veil: 0,
+      duration: scaled(0.7),
+      ease: 'power2.out',
+      onComplete: () => {
+        if (onComplete) onComplete();
+      }
+    });
   }
 
   enterFreeOrbit(options = {}) {
     this.killTimeline();
     this.locked = false;
     const rig = this.rig;
-    const duration = options.duration ?? 3.4;
+    const duration = scaled(options.duration ?? 3.4);
     this.refreshRegionTilt();
     const az = options.keepAz ? rig.az : this.nearestAligned(rig.az, options.az ?? this.regionAzTilt);
 
@@ -338,7 +394,6 @@ export class CameraDirector {
     this.locked = true;
     const rig = this.rig;
     const wideAz = this.wideAz;
-    this._timelineT0 = performance.now() / 1000;
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -349,22 +404,23 @@ export class CameraDirector {
       }
     });
 
-    this.scheduleState(tl, STATES.REGION_REVEAL, 0);
-    tl.to(this, { regionVisibility: 0, duration: 1.8, ease: 'power2.in' }, 0);
-    tl.to(this, { veil: 0, duration: 1.2 }, 0);
-    tl.to(this, { cloudOpacity: CLOUDS.opacity.returnReveal, duration: 2.2, ease: 'power1.inOut' }, 0);
-    tl.to(this, { spinScale: 0.55, duration: 2, ease: 'power2.out' }, 0);
-    tl.to(rig, { dist: 2.6, fov: 44, offX: 0, offY: 0.023, duration: 3.2, ease: 'power2.inOut' }, 0);
+    this.scheduleState(tl, STATES.CONTINENT, 0);
+    tl.to([this.atlasA, this.atlasB], { opacity: 0, duration: scaled(0.9), ease: 'power2.in' }, 0);
+    tl.to(this, { regionVisibility: 0, duration: scaled(1.8), ease: 'power2.in' }, 0);
+    tl.to(this, { veil: 0, duration: scaled(1.2) }, 0);
+    tl.to(this, { cloudOpacity: CLOUDS.opacity.returnReveal, duration: scaled(2.2), ease: 'power1.inOut' }, 0);
+    tl.to(this, { spinScale: 0.55, duration: scaled(2), ease: 'power2.out' }, 0);
+    tl.to(rig, { dist: 2.6, fov: 44, offX: 0, offY: 0.023, duration: scaled(3.2), ease: 'power2.inOut' }, 0);
 
-    this.scheduleState(tl, STATES.EARTH_APPROACH, 2.6);
-    tl.to(rig, { dist: 5.2, fov: 46, focus: 0.45, duration: 4.4, ease: 'power2.inOut' }, 2.6);
-    tl.to(rig, { el: 12 * DEG, az: wideAz, duration: 4.4, ease: 'power2.inOut' }, 2.6);
-    tl.to(this, { cloudOpacity: CLOUDS.opacity.returnApproach, duration: 4.4, ease: 'power1.out' }, 2.6);
-    tl.to(this, { spinScale: 0.55, duration: 4, ease: 'power2.out' }, 2.6);
-    tl.to(this, { orbitLineFade: 0, duration: 4 }, 2.6);
-    tl.to(this, { coronaScale: 1, duration: 4 }, 2.6);
+    this.scheduleState(tl, STATES.EARTH_APPROACH, scaled(2.6));
+    tl.to(rig, { dist: 5.2, fov: 46, focus: 0.45, duration: scaled(4.4), ease: 'power2.inOut' }, scaled(2.6));
+    tl.to(rig, { el: 12 * DEG, az: wideAz, duration: scaled(4.4), ease: 'power2.inOut' }, scaled(2.6));
+    tl.to(this, { cloudOpacity: CLOUDS.opacity.returnApproach, duration: scaled(4.4), ease: 'power1.out' }, scaled(2.6));
+    tl.to(this, { spinScale: 0.55, duration: scaled(4), ease: 'power2.out' }, scaled(2.6));
+    tl.to(this, { orbitLineFade: 0, duration: scaled(4) }, scaled(2.6));
+    tl.to(this, { coronaScale: 1, duration: scaled(4) }, scaled(2.6));
 
-    this.scheduleState(tl, STATES.SOLAR_SYSTEM, 6.4);
+    this.scheduleState(tl, STATES.SOLAR_SYSTEM, scaled(6.4));
     tl.to(rig, {
       dist: WIDE.dist,
       fov: WIDE.fov,
@@ -373,32 +429,62 @@ export class CameraDirector {
       offY: WIDE.offY,
       el: WIDE.elDeg * DEG,
       az: wideAz,
-      duration: 5.6,
+      duration: scaled(5.6),
       ease: 'power2.inOut'
-    }, 5.4);
-    tl.to({}, { duration: 0.1 }, 11.0);
+    }, scaled(5.4));
+    tl.to({}, { duration: scaled(0.1) }, scaled(11.0));
 
     this.timeline = tl;
     return tl;
+  }
+
+  // Leaves the flat map and flies back out. When no map is up this is just the
+  // ordinary return, so callers do not need to know which mode they were in.
+  exitAtlas(onComplete) {
+    if (!this.atlasVisible) {
+      this.returnToSolarSystem(onComplete);
+      return null;
+    }
+    this.killTimeline();
+    const duration = scaled(0.5);
+    gsap.to(this, { veil: 1, duration, ease: 'power2.in' });
+    return gsap.to([this.atlasA, this.atlasB], {
+      opacity: 0,
+      duration,
+      ease: 'power2.in',
+      onComplete: () => {
+        this.atlasA.opacity = 0;
+        this.atlasB.opacity = 0;
+        const asia = ATLAS.levels.asia.start;
+        const coxs = ATLAS.levels.coxs.start;
+        this.atlasA.u = asia.u;
+        this.atlasA.v = asia.v;
+        this.atlasA.zoom = asia.zoom;
+        this.atlasB.u = coxs.u;
+        this.atlasB.v = coxs.v;
+        this.atlasB.zoom = coxs.zoom;
+        this.returnToSolarSystem(onComplete);
+      }
+    });
   }
 
   killTimeline() {
     if (this.timeline) this.timeline.kill();
     this.timeline = null;
     this.pendingComplete = null;
-    this._timelineT0 = 0;
     gsap.killTweensOf(this.rig);
     gsap.killTweensOf(this);
+    gsap.killTweensOf(this.atlasA);
+    gsap.killTweensOf(this.atlasB);
   }
 
-  pauseTimeline() {
-    this.clock.pause();
-  }
-  resumeTimeline() {
-    this.clock.resume();
-  }
-
-  restoreSolarState(duration = 0.9) {
+  restoreSolarState(duration = scaled(0.9)) {
+    gsap.to([this.atlasA, this.atlasB], {
+      opacity: 0,
+      duration,
+      ease: 'power2.out',
+      overwrite: 'auto'
+    });
     gsap.to(this, {
       orbitLineFade: 0,
       regionVisibility: 0,
@@ -418,6 +504,11 @@ export class CameraDirector {
     this.locked = false;
     this.restoreSolarState();
     return true;
+  }
+
+  // True while any map plate is on screen; the 3D marker must stay quiet then.
+  get atlasVisible() {
+    return this.atlasA.opacity > 0.02 || this.atlasB.opacity > 0.02;
   }
 
   get isFlying() {

@@ -1,5 +1,5 @@
 import { gsap } from '../vendor/gsap/index.js';
-import { CATEGORIES } from './config.js';
+import { CATEGORIES, REGION } from './config.js';
 
 export class UI {
   constructor(handlers) {
@@ -8,7 +8,6 @@ export class UI {
       loader: document.getElementById('loader'),
       loaderSub: document.getElementById('loader-sub'),
       loaderFill: document.getElementById('loader-fill'),
-      enterBtn: document.getElementById('enter-btn'),
       masthead: document.getElementById('masthead'),
       readout: document.getElementById('readout'),
       roState: document.getElementById('ro-state'),
@@ -23,6 +22,7 @@ export class UI {
       destination: document.getElementById('destination'),
       backbar: document.getElementById('backbar'),
       backBtn: document.getElementById('back-btn'),
+      skipBtn: document.getElementById('skip-btn'),
       hint: document.getElementById('hint'),
       veil: document.getElementById('veil'),
       veilNoise: document.getElementById('veil-noise')
@@ -30,9 +30,10 @@ export class UI {
 
     this.anchorVisible = false;
     this.hintTimer = null;
+    this.veilNoiseReady = false;
+    this.veilNoiseScheduled = false;
     this.buildChoices();
     this.bind();
-    this.makeVeilNoise();
   }
 
   buildChoices() {
@@ -50,10 +51,29 @@ export class UI {
   bind() {
     this.el.placeBtn.addEventListener('click', () => this.handlers.onSelect(null));
     this.el.backBtn.addEventListener('click', () => this.handlers.onBack());
-    this.el.enterBtn.addEventListener('click', () => this.handlers.onEnter());
+    this.el.skipBtn.addEventListener('click', () => this.handlers.onSkip());
+  }
+
+  // Building the veil noise is only needed once a flight starts, and it is
+  // expensive enough to stall a frame. Keep it off the startup path and bake it
+  // during idle after the reveal instead.
+  scheduleVeilNoise() {
+    if (this.veilNoiseReady || this.veilNoiseScheduled) return;
+    this.veilNoiseScheduled = true;
+    const run = () => {
+      this.veilNoiseScheduled = false;
+      this.makeVeilNoise();
+    };
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(run, { timeout: 2500 });
+    } else {
+      window.setTimeout(run, 800);
+    }
   }
 
   makeVeilNoise() {
+    if (this.veilNoiseReady) return;
+    this.veilNoiseReady = true;
     const size = 340;
     const canvas = document.createElement('canvas');
     canvas.width = size;
@@ -81,7 +101,7 @@ export class UI {
     }
     ctx.putImageData(image, 0, 0);
     this.el.veilNoise.style.backgroundImage = `url(${canvas.toDataURL('image/png')})`;
-    this.el.veilNoise.style.backgroundSize = `${size}px ${size}px}`;
+    this.el.veilNoise.style.backgroundSize = `${size}px ${size}px`;
     gsap.to(this.el.veilNoise, {
       backgroundPosition: `${-size}px ${-size * 0.6}px`,
       duration: 26,
@@ -99,13 +119,6 @@ export class UI {
     this.el.loaderSub.textContent = text;
   }
 
-  showEnter() {
-    this.el.loaderSub.textContent = 'Observatory ready';
-    this.el.loaderFill.style.width = '100%';
-    this.el.enterBtn.disabled = false;
-    gsap.fromTo(this.el.enterBtn, { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power2.out' });
-  }
-
   dismissLoader() {
     return gsap
       .timeline()
@@ -121,6 +134,20 @@ export class UI {
       .then();
   }
 
+  showSkip() {
+    this.el.skipBtn.disabled = false;
+    gsap.killTweensOf(this.el.skipBtn);
+    gsap.set(this.el.skipBtn, { pointerEvents: 'auto' });
+    gsap.to(this.el.skipBtn, { opacity: 1, duration: 0.6, ease: 'power2.out' });
+  }
+
+  hideSkip(duration = 0.4) {
+    this.el.skipBtn.disabled = true;
+    gsap.killTweensOf(this.el.skipBtn);
+    gsap.set(this.el.skipBtn, { pointerEvents: 'none' });
+    gsap.to(this.el.skipBtn, { opacity: 0, duration, ease: 'power2.in' });
+  }
+
   setActiveCategory(key) {
     for (const button of this.choiceButtons) {
       const active = button.dataset.key === key;
@@ -134,7 +161,7 @@ export class UI {
     this.el.noteLine.textContent = category
       ? 'Let\u2019s find somewhere to listen.'
       : 'One region is available in this build.';
-    this.el.noteDest.textContent = 'Destination available \u00b7 Bay of Bengal';
+    this.el.noteDest.textContent = `Destination available \u00b7 ${REGION.label}`;
     gsap.killTweensOf(this.el.note);
     gsap.fromTo(
       this.el.note,
@@ -164,6 +191,7 @@ export class UI {
   }
 
   showDestination() {
+    document.body.classList.add('destination-open');
     gsap.killTweensOf(this.el.destination);
     gsap.fromTo(
       this.el.destination,
@@ -175,6 +203,7 @@ export class UI {
   }
 
   hideDestination(duration = 0.9) {
+    document.body.classList.remove('destination-open');
     gsap.killTweensOf(this.el.destination);
     gsap.to(this.el.destination, { opacity: 0, y: 18, duration, ease: 'power2.in' });
     gsap.to(this.el.backbar, { opacity: 0, duration: 0.6, ease: 'power2.in' });
@@ -186,6 +215,7 @@ export class UI {
   }
 
   setVeil(value) {
+    if (value > 0 && !this.veilNoiseReady && !this.veilNoiseScheduled) this.makeVeilNoise();
     this.el.veil.style.opacity = String(value);
     this.el.veilNoise.style.opacity = String(value * 0.16);
   }
