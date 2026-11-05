@@ -23,6 +23,7 @@ export class UI {
       destination: document.getElementById('destination'),
       backbar: document.getElementById('backbar'),
       backBtn: document.getElementById('back-btn'),
+      skipBtn: document.getElementById('skip-btn'),
       hint: document.getElementById('hint'),
       veil: document.getElementById('veil'),
       veilNoise: document.getElementById('veil-noise')
@@ -51,6 +52,7 @@ export class UI {
     this.el.placeBtn.addEventListener('click', () => this.handlers.onSelect(null));
     this.el.backBtn.addEventListener('click', () => this.handlers.onBack());
     this.el.enterBtn.addEventListener('click', () => this.handlers.onEnter());
+    this.el.skipBtn.addEventListener('click', () => this.handlers.onSkip());
   }
 
   makeVeilNoise() {
@@ -121,6 +123,20 @@ export class UI {
       .then();
   }
 
+  showSkip() {
+    this.el.skipBtn.disabled = false;
+    gsap.killTweensOf(this.el.skipBtn);
+    gsap.set(this.el.skipBtn, { pointerEvents: 'auto' });
+    gsap.to(this.el.skipBtn, { opacity: 1, duration: 0.6, ease: 'power2.out' });
+  }
+
+  hideSkip(duration = 0.4) {
+    this.el.skipBtn.disabled = true;
+    gsap.killTweensOf(this.el.skipBtn);
+    gsap.set(this.el.skipBtn, { pointerEvents: 'none' });
+    gsap.to(this.el.skipBtn, { opacity: 0, duration, ease: 'power2.in' });
+  }
+
   setActiveCategory(key) {
     for (const button of this.choiceButtons) {
       const active = button.dataset.key === key;
@@ -164,6 +180,7 @@ export class UI {
   }
 
   showDestination() {
+    document.body.classList.add('destination-open');
     gsap.killTweensOf(this.el.destination);
     gsap.fromTo(
       this.el.destination,
@@ -175,6 +192,7 @@ export class UI {
   }
 
   hideDestination(duration = 0.9) {
+    document.body.classList.remove('destination-open');
     gsap.killTweensOf(this.el.destination);
     gsap.to(this.el.destination, { opacity: 0, y: 18, duration, ease: 'power2.in' });
     gsap.to(this.el.backbar, { opacity: 0, duration: 0.6, ease: 'power2.in' });

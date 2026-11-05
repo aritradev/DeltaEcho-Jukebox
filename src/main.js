@@ -26,6 +26,7 @@ class App {
     this.elapsed = 0;
     this.mode = MODE.SOLAR;
     this.started = false;
+    this.skipping = false;
     this.hoveringHotspot = false;
     this.hotspotArmed = false;
     this.raycaster = new THREE.Raycaster();
@@ -40,7 +41,8 @@ class App {
     this.ui = new UI({
       onSelect: (category) => this.onSelect(category),
       onBack: () => this.onBack(),
-      onEnter: () => this.onEnter()
+      onEnter: () => this.onEnter(),
+      onSkip: () => this.onSkip()
     });
 
     this.buildRenderer();
@@ -178,17 +180,21 @@ class App {
     this.mode = MODE.FLYING;
     this.hotspotArmed = false;
     this.region.setHover(0);
+    this.ui.showSkip();
     this.director.beginFlight(() => this.onFlightComplete());
     window.setTimeout(() => this.ui.hidePanel(1.6), 1700);
   }
 
   onFlightComplete() {
     this.mode = MODE.ATLAS;
+    this.skipping = false;
     this.hotspotArmed = false;
     this.region.setHover(0);
     this.ui.setAnchor(0, 0, false);
     this.ui.hideSelectionNote();
+    this.ui.hideSkip();
     this.ui.showDestination();
+    this.controls.setEnabled(false);
     this.ui.showHint("Cox's Bazar \u00b7 listening arrives in a later phase", 6.5);
   }
 
@@ -203,6 +209,7 @@ class App {
     this.ui.setAnchor(0, 0, false);
     this.director.exitAtlas(() => {
       this.mode = MODE.SOLAR;
+      this.skipping = false;
       this.controls.setEnabled(true);
       this.ui.setActiveCategory(null);
       this.ui.showPanel(1.4);
@@ -211,11 +218,30 @@ class App {
     });
   }
 
+  onSkip() {
+    if (!this.started || this.skipping || this.mode !== MODE.FLYING) return;
+    this.skipping = true;
+    this.mode = MODE.FLYING;
+    this.hotspotArmed = false;
+    this.hoveringHotspot = false;
+    this.region.setHover(0);
+    this.ui.setAnchor(0, 0, false);
+    this.ui.hidePanel(0.4);
+    this.ui.hideSelectionNote();
+    this.ui.setPanelEnabled(false);
+    this.ui.hideSkip(0.3);
+    this.controls.setEnabled(false);
+    document.body.classList.remove('grab', 'pointing');
+    this.ui.showHint("Skipping to Cox's Bazar", 2.2);
+    this.director.skipToRegion(() => this.onFlightComplete());
+  }
+
   onUserIntent() {
     if (this.mode !== MODE.FLYING) return;
     if (!this.director.interrupt()) return;
     const near = this.director.rig.dist < 6;
     this.mode = near ? MODE.EXPLORE : MODE.SOLAR;
+    this.ui.hideSkip();
     this.ui.hideSelectionNote();
     this.ui.showPanel(1.2);
     this.ui.setPanelEnabled(true);
@@ -286,10 +312,13 @@ class App {
     this.ui.setPanelEnabled(false);
     this.ui.hideSelectionNote();
     this.ui.hidePanel(1.1);
+    this.ui.showSkip();
     this.director.continueToRegion(() => {
       this.mode = MODE.ATLAS;
       this.hotspotArmed = false;
+      this.ui.hideSkip();
       this.ui.showDestination();
+      this.controls.setEnabled(false);
     });
   }
 

@@ -563,6 +563,43 @@ body.pointing { cursor: pointer; }
   text-align: center;
 }
 
+/* Keep the arrival hint clear of the back button while the card is open. */
+body.destination-open .hint { bottom: calc(var(--pad) + 46px); }
+
+/* ------------------------------------------------------------------ skip */
+
+.skip-btn {
+  position: fixed;
+  right: var(--pad);
+  bottom: calc(var(--pad) + 6px);
+  z-index: 13;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  background: rgba(6, 11, 20, 0.42);
+  border: 1px solid var(--line-soft);
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: color 0.3s ease, border-color 0.3s ease, background 0.3s ease;
+}
+.skip-btn:hover,
+.skip-btn:focus-visible {
+  color: var(--ink);
+  border-color: var(--line);
+  background: rgba(160, 196, 236, 0.09);
+  outline: none;
+}
+.skip-arrow { transition: transform 0.3s ease; }
+.skip-btn:hover .skip-arrow { transform: translateX(3px); }
+
 /* ------------------------------------------------------------------ loader */
 
 .loader {
@@ -701,6 +738,7 @@ body.pointing { cursor: pointer; }
   .selection-note { bottom: auto; top: calc(var(--pad) + 42px); max-width: none; right: var(--pad); }
   .backbar { bottom: calc(var(--pad) + 4px); }
   .hint { display: none; }
+  .skip-btn { top: calc(var(--pad) + 2px); bottom: auto; }
 }
 
 @media (max-height: 560px) {

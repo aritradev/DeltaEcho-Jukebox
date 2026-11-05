@@ -301,6 +301,52 @@ export class CameraDirector {
     return tl;
   }
 
+  // Abandons whatever is playing and cuts straight to the end of the region
+  // sequence: the flat beach map, fully zoomed. The veil flashes once so the
+  // jump reads as a deliberate cut rather than a glitch, then fades to reveal
+  // the destination. `onComplete` fires when the reveal is visible.
+  skipToRegion(onComplete) {
+    this.killTimeline();
+    this.locked = false;
+    this.pendingComplete = null;
+    this.refreshRegionTilt();
+
+    const coxs = ATLAS.levels.coxs;
+    const rig = this.rig;
+    rig.dist = 1.052;
+    rig.az = this.regionAzTilt;
+    rig.el = this.regionElTilt + REGION_EL;
+    rig.fov = 53;
+    rig.focus = 1;
+    rig.offX = 0;
+    rig.offY = 0.03;
+
+    this.spinScale = 0.55;
+    this.regionVisibility = 0.1;
+    this.cloudOpacity = CLOUDS.opacity.regionReveal;
+    this.orbitLineFade = 1;
+    this.coronaScale = 0.85;
+
+    // Only the beach plate is up at the end of the sequence; the Asia plate has
+    // already faded out beneath it.
+    this.atlasA.opacity = 0;
+    this.atlasB.u = coxs.end.u;
+    this.atlasB.v = coxs.end.v;
+    this.atlasB.zoom = coxs.end.zoom;
+    this.atlasB.opacity = 1;
+
+    this.setState(STATES.LOCALITY);
+    this.veil = 0.85;
+    return gsap.to(this, {
+      veil: 0,
+      duration: 0.7,
+      ease: 'power2.out',
+      onComplete: () => {
+        if (onComplete) onComplete();
+      }
+    });
+  }
+
   enterFreeOrbit(options = {}) {
     this.killTimeline();
     this.locked = false;

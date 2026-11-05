@@ -28,6 +28,8 @@ Scope: `src/camera-director.js`, the camera-related parts of `src/main.js`,
 > continent map stage after cloud entry`). The previous Phase 1 baseline was
 > `8ab5577`. If the code and this document disagree, the code is correct and this
 > document is stale — see §11.
+>
+> **Skip control.** Added after the baseline commit; §5.7 records its current values.
 
 ---
 
@@ -317,7 +319,28 @@ atlasA/atlasB.opacity → 0
 user's grabbed viewpoint is preserved. In the current prototype this is achieved by
 `restoreSolarState()` touching scene parameters only. See Q5 for the consequence.
 
-### 5.7 Totals
+### 5.7 `skipToRegion` — skip control
+
+The Skip control is shown only while `MODE === FLYING`: it appears when a category,
+the place, or the region hotspot is chosen, and hides again on arrival, Back, or
+interrupt. It is disabled whenever it is hidden.
+
+`skipToRegion()` kills the timeline and cuts straight to the end of the region
+sequence instead of playing it.
+
+| Item | Value |
+| --- | --- |
+| Rig | `dist 1.052`, `az regionAzTilt`, `el regionElTilt + 3.2°`, `fov 53`, `focus 1`, `offX 0`, `offY 0.03` |
+| Scene | `spinScale 0.55`, `regionVisibility 0.1`, `cloudOpacity 0.4`, `orbitLineFade 1`, `coronaScale 0.85` |
+| Atlas | `atlasA.opacity 0`; `atlasB` at `coxs.end`, opacity 1 |
+| State | `08 locality` immediately |
+| Veil | jumps to 0.85, fades to 0 over 0.7 s |
+| Completion | callback fires when the veil clears; `MODE` becomes `ATLAS` |
+
+This is a tween, not a timeline, so `interrupt()` does not apply during the 0.7 s
+cut; controls are disabled for that window.
+
+### 5.8 Totals
 
 | Path | Duration |
 | --- | --- |
@@ -328,6 +351,7 @@ user's grabbed viewpoint is preserved. In the current prototype this is achieved
 | `enterFreeOrbit` | 3.4 s |
 | `introDolly` | 5.2 s |
 | `restoreSolarState` | 0.9 s |
+| `skipToRegion` | 0.7 s |
 
 ---
 
@@ -397,6 +421,7 @@ disabled, so no input can reach a tween.
 | `returnToSolarSystem` | `true` |
 | `exitAtlas` | unchanged (delegates to `returnToSolarSystem`) |
 | `enterFreeOrbit` | `false` |
+| `skipToRegion` | `false` |
 | timeline `onComplete` | `false` |
 | `killTimeline` / `interrupt` | `false` (via `interrupt`) |
 
@@ -515,6 +540,7 @@ rotating and while more than one region can be addressed. See §13.
 | Interrupt during cloud entry | Mode `EXPLORE`; veil fades to 0, atlas never appears | Verified |
 | Interrupt during `returnToSolarSystem` | `interrupt()` succeeds; the return timeline's own callback never runs, so panel restoration comes from `onUserIntent` | Verified |
 | Drag/wheel during `CONTINENT` → `LOCALITY` | No effect: controls are disabled on the `CONTINENT` state change | Verified |
+| Skip during any flight | Timeline killed; 0.7 s veil cut; map reveal and destination card | Verified |
 | Escape during `ATLAS` | Runs `onBack()` and leaves the map | Verified |
 | `Escape` during `FLYING` | No effect | Verified |
 | Back during `FLYING` | No effect | Verified |
@@ -603,6 +629,9 @@ Back button from the map: `06` at 0, `02` at 3.1, `01` at 6.9, settled at 11.6
 (the 0.5 s plate fade precedes the return). From elsewhere: `06` at 0, `02` at 2.6,
 `01` at 6.4, settled at 11.1.
 
+Skip control: hidden until a category, the place, or the region hotspot starts a
+flight; it then reaches `08 · locality` in 0.7 s with the destination card shown.
+
 ### 9.2 Interruption matrix
 
 Reload the page between destructive tests to return to the baseline.
@@ -641,7 +670,9 @@ baseline choreography:
 2. I2, I3, I4, I5, I6, I7, I8, I9, I10 pass.
 3. The destination card appears only after successful completion, never after an
    interruption.
-4. `git diff` shows no change outside the intended files.
+4. The Skip control is hidden outside `FLYING`, and skipping reaches `08 · locality`
+   with the destination card shown.
+5. `git diff` shows no change outside the intended files.
 
 ---
 
