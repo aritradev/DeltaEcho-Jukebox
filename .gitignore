@@ -42,3 +42,7 @@ coverage/
 
 # Local server files
 server.pid
+.vercel
+
+# Dev-only scripts (not deployed to Vercel)
+dev/
