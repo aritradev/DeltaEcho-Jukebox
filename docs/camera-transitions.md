@@ -602,8 +602,8 @@ so an interrupted flight can never strand a plate over a live Earth view.
 no browser harness. Everything below is a manual procedure executed in a running
 build. Do not report a check as passed unless you performed it.
 
-Start the app with `node server.mjs`, open `http://localhost:5173/`, and click
-"Enter the observatory". The readout in the top-left is the state indicator.
+Start the app with `node server.mjs`, open `http://localhost:5173/`, and wait for
+the loader to reveal the scene. The readout in the top-left is the state indicator.
 
 ### 9.1 Timing checkpoints
 

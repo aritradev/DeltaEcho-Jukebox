@@ -107,7 +107,7 @@ Two rules that prevent most regressions:
 No automated tests exist. Before calling a change done:
 
 1. `node server.mjs` starts without errors.
-2. The loader completes and "Enter the observatory" becomes enabled.
+2. The loader completes and auto-reveals the solar system.
 3. Console has no errors or WebGL shader compile failures.
 4. The intro dolly completes and the solar system is framed.
 5. Selecting Ocean / Atmosphere / Land flies to the region and shows the
