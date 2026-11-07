@@ -57,8 +57,9 @@ body.pointing { cursor: pointer; }
 #veil {
   z-index: 3;
   opacity: 0;
+  overflow: hidden;
   background:
-    radial-gradient(ellipse 74% 62% at 50% 58%, rgba(236, 245, 255, 0.97) 0%, rgba(206, 226, 249, 0.88) 38%, rgba(163, 192, 227, 0.42) 68%, rgba(140, 172, 212, 0) 100%);
+    radial-gradient(ellipse 84% 74% at 50% 55%, rgba(208, 226, 246, 0.46) 0%, rgba(168, 196, 228, 0.24) 46%, rgba(140, 172, 212, 0) 84%);
 }
 
 #veil-noise {

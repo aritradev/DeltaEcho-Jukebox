@@ -95,6 +95,7 @@ The app instance is exposed as `window.__jukebox` for debugging.
 | `src/earth.js` | Earth surface, night lights, clouds, atmosphere/haze shaders, framing helpers | three, config, utils |
 | `src/region.js` | Region footprint, beam, particles, reticle, hotspot hit target | three, config, utils |
 | `src/atlas.js` | Flat map stage: camera-attached plates, per-frame window math | three, config, utils |
+| `src/cloud-pass.js` | Camera-space cloud billboards and backdrops for the globe→map handoff; procedural textures | three, utils |
 | `src/camera-director.js` | Camera rig, keyframes, transitions, derived scene parameters | three, gsap, config, utils |
 | `src/controls.js` | Drag/scroll/pinch input mapped to the rig, intent signaling | three, config |
 | `src/ui.js` | All DOM reads/writes and overlay animation | gsap, config |
@@ -102,11 +103,13 @@ The app instance is exposed as `window.__jukebox` for debugging.
 ### Direction of dependencies
 
 ```text
-main.js  ──>  ui.js, controls.js, camera-director.js, atlas.js, region.js,
-              earth.js, solar-system.js, starfield.js, assets.js, config.js
+main.js  ──>  ui.js, controls.js, camera-director.js, atlas.js, cloud-pass.js,
+              region.js, earth.js, solar-system.js, starfield.js, assets.js,
+              config.js
 
 camera-director.js ──> earth.js (queries), region.js (queries), config.js
 atlas.js ──> config.js, utils.js
+cloud-pass.js ──> utils.js
 earth.js / region.js / solar-system.js ──> config.js, utils.js
 config.js ──> (nothing)
 ```
@@ -188,9 +191,10 @@ earth.setNormalScale(...)               detail normals ramp with proximity
 sunLight.position.copy(solar.sunPosition)
 
 controls.update(delta)                  user input -> rig
-director.apply()                        rig -> camera position/quaternion
+director.apply(delta)                   rig -> camera position/quaternion
 atlas.sync([atlasA, atlasB])            hand the map state to the renderer module
 atlas.update()                          state -> texture offset/repeat, visibility
+cloudPass.update(delta, director.cloudPass)  billboard cloud intensity
 scene.updateMatrixWorld(true)
 
 updateHotspot(delta)                    raycast, region uniforms, anchor label
@@ -214,13 +218,17 @@ window while a transition is changing `fov`.
 `CameraDirector` owns an animatable rig — `dist`, `az`, `el`, `fov`, `focus`,
 `offX`, `offY` — and converts it to a camera transform in `apply()`. GSAP tweens
 the rig; nothing tweens the camera. It also owns the scene parameters the render
-loop reads: `spinScale`, `cloudOpacity`, `veil`, `regionVisibility`,
+loop reads: `spinScale`, `cloudOpacity`, `cloudPass`, `veil`, `regionVisibility`,
 `coronaScale`, `orbitLineFade`, `punch`, and the two map states `atlasA` / `atlasB`
 (`{ u, v, zoom, opacity }`).
 
 The map states are not camera transforms. `src/atlas.js` reads them and writes only
 texture `offset`/`repeat` on camera-attached planes, so the rig contract in §6 still
 holds with the map on screen.
+
+`cloudPass` is a single intensity scalar. `src/cloud-pass.js` reads it and animates
+its own camera-attached billboards; like the atlas it never writes a camera
+transform, so the same contract holds while the clouds are up.
 
 `WIDE` (top of the file) is the canonical solar-system framing and `REGION_EL`
 shifts the regional shot.
@@ -324,6 +332,9 @@ atlas maps. The backdrop group is `smoke.png`, the cloud sprite the nebula sky i
 painted from. The atlas group is derived from `ATLAS.levels` in `config.js`, so
 adding a map level there is enough to get it loaded. Progress is reported as a ratio
 and mapped by the App onto the loader bar.
+
+`src/cloud-pass.js` does not add loader entries: its puff and cloud-field textures
+are generated procedurally at startup from seeded value noise.
 
 Three textures are intentionally unreferenced: `galaxy.jpg` and `galaxy.webp`
 (earlier galaxy backdrops, replaced by the baked nebula) and `moon.jpg` (no Moon

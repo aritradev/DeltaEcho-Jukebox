@@ -217,7 +217,7 @@ export class UI {
   setVeil(value) {
     if (value > 0 && !this.veilNoiseReady && !this.veilNoiseScheduled) this.makeVeilNoise();
     this.el.veil.style.opacity = String(value);
-    this.el.veilNoise.style.opacity = String(value * 0.16);
+    this.el.veilNoise.style.opacity = String(value * 0.12);
   }
 
   setAnchor(x, y, visible, scale = 1) {

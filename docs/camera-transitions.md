@@ -116,6 +116,7 @@ window resize; it does not move the camera and is therefore permitted.
 `buildWorld()` before the first frame.
 
 ```text
+0. if regionTrack: az += shortestDelta(az, earth.getRegionAzElTilt().az) * (1 - exp(-delta / 0.3))
 1. local  = sphericalToVector3(dist * EARTH.radius, az, el)
 2. pos    = local.applyQuaternion(earth.orbitFrameQuaternion()) + earth.center
 3. target = lerp(earth.center, earth.getRegionWorldPosition(), focus)
@@ -125,6 +126,11 @@ window resize; it does not move the camera and is therefore permitted.
 6. camera.position = pos;  camera.lookAt(target)
 7. if |camera.fov - rig.fov| > 1e-4: assign and updateProjectionMatrix()
 ```
+
+During the final region approach and cloud entry, `regionTrack` is true: step 0
+re-samples the region azimuth every frame and eases `az` toward it, so the dive
+stays radial while the planet spins. `regionTrack` is cleared on the `CONTINENT`
+state and by `killTimeline()`.
 
 ### Frame semantics — **Verified**
 
@@ -209,13 +215,13 @@ the 850 ms panel-hide timer.
 | 0 → 1.1 | — | **Hold.** `t0 = TIMELINE.acknowledge = 1.1`; nothing animates |
 | 1.1 | `02 earth approach` | `dist → 5.1`, `el → 11.5°`, `fov → 45`, `focus → 0.45`, `offX → 0.02`, `offY → 0.01` (3.4 s, `power1.inOut`; offsets `power2.inOut`) |
 | 1.1 | — | `cloudOpacity → 0.34` (3.06 s), `spinScale → 0.62` (1.7 s), `coronaScale → 0.85` (3.4 s), `orbitLineFade → 0.55` (3.4 s) |
-| 4.5 | `03 earth orbit` | `dist → 2.7`, `az → regionAzTilt + 0.3` via `nearestAligned`, `el → 15°`, `fov → 40`, `focus → 0.85`, `offX → 0`, `offY → 0.022` (2.75 s) |
+| 4.5 | `03 earth orbit` | `dist → 2.7`, `az → regionAzTilt` via `nearestAligned` (no offset), `el → 15°`, `fov → 40`, `focus → 0.85`, `offX → 0`, `offY → 0.022` (2.75 s) |
 | 4.5 | — | `cloudOpacity → 0.66`; `spinScale → 0.55` starts at 5.05 for 1.375 s |
-| 7.25 | `04 region approach` | `dist → 1.44` (`power2.in`), `az → regionAzTilt`, `el → regionElTilt + 3.2°`, `fov → 47`, `focus → 1`, `offX → −0.028`, `offY → 0.06` (2.25 s) |
+| 7.25 | `04 region approach` | `dist → 1.44` (`power2.in`), `az` tracks the live region azimuth (`regionTrack`, no fixed swing), `el → regionElTilt + 3.2°`, `fov → 47`, `focus → 1`, `offX → −0.028`, `offY → 0.06` (2.25 s) |
 | 7.25 | — | `spinScale → 0.55` (1.24 s), `regionVisibility → 0.14` (1.35 s), `cloudOpacity → 0.92`, `orbitLineFade → 1` (0.8 s) |
-| 9.5 | `05 cloud entry` | `dist → 1.052` and `fov → 53` (`power1.in`), `offX → 0`, `offY → 0.03`, `veil → 0.9` (1.24 s) |
+| 9.5 | `05 cloud entry` | `dist → 1.045` and `fov → 53` (`power1.in`), `offX → 0`, `offY → 0.03`, `veil → 0.78` (1.24 s), `cloudPass → 1` (1.125 s, `power2.in`) |
 | 9.5 | — | `cloudOpacity → 1.0` (1.125 s), `regionVisibility → 0.1` (1.125 s) |
-| 11.75 | `06 continent` | `atlasA` opacity → 1 (0.8 s, `power2.out`), `atlasA.zoom → 1.15` (1.6 s, `sine.inOut`), `veil → 0` (1.25 s, `power2.out`), `cloudOpacity → 0.4` (1.12 s). The veil is still up from cloud entry, so the globe→map swap happens underneath it |
+| 11.75 | `06 continent` | `regionTrack → false`, `atlasA` cut to opacity 1 under the cloud cover, `atlasA.zoom → 1.15` (1.6 s, `sine.inOut`), `veil → 0` (1.25 s, `power2.out`), `cloudPass → 0` (1.36 s, `power2.out`, starts 0.13 s late), `cloudOpacity → 0.4` (1.12 s). The 3D cloud pass is still dense here, so the globe→map swap is hidden and the map never crossfades against the atmosphere limb |
 | 13.35 | `07 country` | `atlasA.u → 0.551`, `atlasA.v → 0.733` (2.0 s, `power3.out`); `atlasA.zoom → 9` (2.0 s, `power2.inOut`) |
 | 15.35 | — | Dissolve, no state change: `atlasB` set to `coxs.start` and faded in (0.85 s); `atlasA` fades out (0.68 s) while still zooming to `9 × 1.4`; `veil → 0.34` then back to 0 |
 | 16.2 | `08 locality` | `atlasB` `u/v/zoom → coxs.end` (1.4 s, `power2.out`) |
@@ -252,14 +258,16 @@ flag, so this path is simply the tail of the full flight with no timing differen
 Reached either directly, or through `exitAtlas()` when a map plate is on screen.
 
 `exitAtlas()` first fades both atlas plates out over 0.25 s while raising the veil to
-1, then resets `atlasA`/`atlasB` to their start values and calls
-`returnToSolarSystem()`. When no plate is visible it forwards straight to
+1 and ramping `cloudPass` to 1, then resets `atlasA`/`atlasB` to their start values
+and calls `returnToSolarSystem(onComplete, true)`. The clouds are therefore already
+up as the map dissolves, so the return reads as climbing back out through the same
+cloud field used on the way in. When no plate is visible it forwards straight to
 `returnToSolarSystem()`, so callers do not need to know the current mode. Back from
 the map therefore takes 0.25 + 5.55 = **5.8 s**; from anywhere else, 5.55 s.
 
 | At | State | Changes |
 | --- | --- | --- |
-| 0 | `06 continent` | `atlasA`/`atlasB` `opacity → 0` (0.45 s), `regionVisibility → 0` (0.9 s), `veil → 0` (0.6 s), `cloudOpacity → 0.72` (1.1 s), `spinScale → 0.55` (1 s), `dist → 2.6`, `fov → 44`, `offX → 0`, `offY → 0.023` (1.6 s) |
+| 0 | `06 continent` | `atlasA`/`atlasB` `opacity → 0` (0.45 s), `regionVisibility → 0` (0.9 s), `veil → 0` (0.6 s), `cloudPass → 0` (1.7 s, `power1.inOut`, starting from 1), `cloudOpacity → 0.72` (1.1 s), `spinScale → 0.55` (1 s), `dist → 2.6`, `fov → 44`, `offX → 0`, `offY → 0.023` (1.6 s) |
 | 1.3 | `02 earth approach` | `dist → 5.2`, `fov → 46`, `focus → 0.45` (2.2 s); `el → 12°`, `az → wideAz` (2.2 s); `cloudOpacity → 0.3`; `orbitLineFade → 0`, `coronaScale → 1` |
 | 2.7 | — | Final tween to `WIDE`: `dist 10.8`, `fov 56`, `focus 0`, `offX −0.278`, `offY 0`, `el 15°`, `az wideAz` (2.8 s, ends 5.5) |
 | 3.2 | `01 solar system` | Readout switches before the camera finishes arriving |
@@ -317,10 +325,16 @@ orbitLineFade       → 0
 regionVisibility    → 0
 coronaScale         → 1
 veil                → 0
+cloudPass           → 0
 cloudOpacity        → CLOUDS.opacity.solarRest (0.3)
 spinScale           → 0.55
 atlasA/atlasB.opacity → 0
 ```
+
+`cloudPass` is deliberately *not* zeroed by `killTimeline()`: an interrupt while
+the clouds are up fades them out here instead of popping them off. `beginFlight`,
+`continueToRegion`, and `skipToRegion` reset it directly because they start from a
+state where the cloud pass is already gone.
 
 **MUST** — Interrupt recovery must not move the camera to a "recovered" pose: the
 user's grabbed viewpoint is preserved. In the current prototype this is achieved by
@@ -338,7 +352,7 @@ sequence instead of playing it.
 | Item | Value |
 | --- | --- |
 | Rig | `dist 1.052`, `az regionAzTilt`, `el regionElTilt + 3.2°`, `fov 53`, `focus 1`, `offX 0`, `offY 0.03` |
-| Scene | `spinScale 0.55`, `regionVisibility 0.1`, `cloudOpacity 0.4`, `orbitLineFade 1`, `coronaScale 0.85` |
+| Scene | `spinScale 0.55`, `regionVisibility 0.1`, `cloudOpacity 0.4`, `cloudPass 0`, `orbitLineFade 1`, `coronaScale 0.85` |
 | Atlas | `atlasA.opacity 0`; `atlasB` at `coxs.end`, opacity 1 |
 | State | `08 locality` immediately |
 | Veil | jumps to 0.85, fades to 0 over 0.35 s |
@@ -392,10 +406,11 @@ writes only texture `offset`/`repeat` and mesh visibility — never a camera tra
 ### 6.2 Timelines are built synchronously — **Verified**
 
 `buildRegionSequence()` executes during `beginFlight()`/`continueToRegion()`
-construction, at the moment of the click. All target values — including
-`regionAzTilt`, `regionElTilt`, `orbitAz`, and `alignAz` — are captured then. GSAP
-reads *start* values when each tween begins, but *end* values are fixed at
-construction. See Q4.
+construction, at the moment of the click. Target values such as `regionElTilt`
+and `orbitAz` are captured then. GSAP reads *start* values when each tween
+begins, but *end* values are fixed at construction. The region **azimuth** is
+the exception: `regionTrack` re-samples it every frame in `apply()`, so the
+approach is not tied to the click-time value. See Q4.
 
 ### 6.3 Completion ordering
 
@@ -544,7 +559,7 @@ rotating and while more than one region can be addressed. See §13.
 | Interrupt during the 1.1 s hold | Mode `SOLAR` (`dist` still 10.8); panel restored — except the Q2 timer race | Verified / Q2 runtime-pending |
 | Interrupt early in approach | Mode `SOLAR` (`dist > 6`) | Verified |
 | Interrupt late in approach | Mode `EXPLORE` (`dist < 6`), hotspot armed | Verified |
-| Interrupt during cloud entry | Mode `EXPLORE`; veil fades to 0, atlas never appears | Verified |
+| Interrupt during cloud entry | Mode `EXPLORE`; veil and cloud pass fade to 0, atlas never appears | Verified |
 | Interrupt during `returnToSolarSystem` | `interrupt()` succeeds; the return timeline's own callback never runs, so panel restoration comes from `onUserIntent` | Verified |
 | Drag/wheel during `CONTINENT` → `LOCALITY` | No effect: controls are disabled on the `CONTINENT` state change | Verified |
 | Skip during any flight | Timeline killed; 0.35 s veil cut; map reveal and destination card | Verified |
@@ -580,7 +595,9 @@ support will likely add per-region state.
 | `spinScale` | director tweens | `earth.setSpinRate` | 0.55–0.62 |
 | `cloudOpacity` | director tweens | `earth.setCloudOpacity` | 0.3 → 1.0 → 0.4 |
 | `regionVisibility` | director tweens | `main.updateHotspot` | 0 → 0.14 → 0.1 |
-| `veil` | director tweens | `ui.setVeil` | 0 → 0.9 → 0 → 0.34 → 0 |
+| `veil` | director tweens | `ui.setVeil` | 0 → 0.78 → 0 → 0.34 → 0 |
+| `cloudPass` | director tweens | `CloudPass.update` (`src/cloud-pass.js`) | 0 → 1 → 0 |
+| `regionTrack` | director calls | `apply()` | false → true → false |
 | `coronaScale` | director tweens | `solar.setCorona` | 1 → 0.85 → 1 |
 | `orbitLineFade` | director tweens | `solar.setOrbitLines` | 0 → 1 → 0 |
 | `punch` | `main.onHotspotClick` | `main.updateHotspot` | 0 → 1 → 0 |
@@ -590,6 +607,15 @@ support will likely add per-region state.
 objects owned by the director; `Atlas.update()` converts them into texture
 `offset`/`repeat` each frame. `ATLAS.levels` in `src/config.js` holds their tuned
 `start`/`end` values.
+
+`cloudPass` drives `src/cloud-pass.js`: a camera-attached group of procedural
+billboard puffs plus two cloud-field backdrops. The planes travel from `FAR` to
+`NEAR` in camera space, so perspective grows and sweeps them past the lens; the
+backdrops cover the frustum so no gaps expose the globe. Everything renders with
+`depthTest: false` above both the globe and the atlas (`renderOrder` 938/939 for
+the backdrops, 950+ for the puffs), which is what lets one pass cover the
+globe→map handoff. The pass is purely visual: it never writes camera transforms
+and it is not part of the interruption contract beyond fading to 0.
 
 **MUST NOT** — Leave a visible region marker while `MODE` is `SOLAR` after recovery.
 In the current prototype this is guaranteed by `restoreSolarState()` driving
@@ -623,7 +649,7 @@ machines; the ordering and ratios are what matter.
 | 1.1 | `02 · earth approach` | Camera starts closing; panel still fading (gone by ~2.5 s — two overlapping `hidePanel` calls) |
 | 4.5 | `03 · earth orbit` | Earth fills frame; orbit lines fading |
 | 7.25 | `04 · region approach` | Descent accelerates into the globe |
-| 9.5 | `05 · cloud entry` | Veil near peak, clouds dense |
+| 9.5 | `05 · cloud entry` | Cloud pass near full: textured puffs and backdrops fill the frame, veil at its faint haze |
 | 11.75 | `06 · continent` | Veil lifts onto the flat Asia map; drag and wheel stop responding |
 | 13.35 | `07 · country` | Dive onto Bangladesh, destination card appears |
 | 16.2 | `08 · locality` | Beach plate settles |
@@ -633,7 +659,9 @@ Hotspot click from free orbit: `04` at 0, `05` at 2.25, `06` at 4.5, `07` at 6.1
 `08` at 8.95, settled at 10.35.
 
 Back button from the map: `06` at 0, `02` at 1.55, `01` at 3.45, settled at 5.8
-(the 0.25 s plate fade precedes the return). From elsewhere: `06` at 0, `02` at 1.3,
+(the 0.25 s plate fade precedes the return). The cloud pass is already at full by
+the time the return starts and clears as the camera climbs, so the first ~2 s read
+as passing back up through the cloud layer. From elsewhere: `06` at 0, `02` at 1.3,
 `01` at 3.2, settled at 5.55.
 
 Skip control: hidden until a category, the place, or the region hotspot starts a
@@ -648,7 +676,7 @@ Reload the page between destructive tests to return to the baseline.
 | I1 | Drag 1 s after selecting a category | Readout stays `01`; hint "Flight interrupted · manual control restored"; no destination card; panel should be visible — **if it is not, Q2 is confirmed** |
 | I2 | Drag ~3 s after selection | Mode `SOLAR`; panel returns; `dist > 6` |
 | I3 | Drag ~8.5 s after selection | Mode `EXPLORE`; hotspot armed |
-| I4 | Wheel during cloud entry (~10.5 s) | Mode `EXPLORE`; veil fades out; region marker fades |
+| I4 | Wheel during cloud entry (~10.5 s) | Mode `EXPLORE`; veil and cloud pass fade out; region marker fades |
 | I5 | Drag/wheel after `06 · continent` appears (~12.5 s) | No effect at all — controls are disabled; the flight continues to the map |
 | I6 | Wheel ~3 s into the Back transition | Manual control restored; panel returns; readout is not `01`; no stuck state |
 | I7 | Press Escape during any flight | Nothing happens |
@@ -707,7 +735,7 @@ current approach.
 | Q1 | *Resolved in Phase 2 alpha.* The `shortened` flag and the `settle` floor are gone; `buildRegionSequence()` is now the single region tail used by both entry paths, and its duration is exactly the sum of `continent + country + dissolve + locality` | `camera-director.js → buildRegionSequence` | Resolved |
 | Q2 | **Early-interrupt panel race.** `onSelect()` schedules `hidePanel(0.8)` at 850 ms and never clears it. An interrupt before 0.85 s calls `showPanel()`, then the stale timer fades the panel out again. Because `.panel-inner` keeps `pointer-events: auto`, the invisible panel may remain clickable | `main.js` 850 ms timer; `ui.js → hidePanel`; `styles.css .panel-inner` | **Suspected defect — runtime validation required** |
 | Q3 | **Unguarded camera tweens vs. manual input.** `introDolly` writes `dist`/`fov`/`offX`/`offY` for 2.6 s with no input guard, so wheel zoom during it is overwritten each frame; it also starts at `dist = 15.2`, above the user maximum of 15. `enterFreeOrbit` similarly tweens `el` for 1.7 s and can fight a drag | `camera-director.js` introDolly/enterFreeOrbit; `controls.js` clamps | Confirmed source fact |
-| Q4 | **Stale region target.** `buildRegionSequence()` runs synchronously at click time and captures `regionAzTilt`/`regionElTilt`. Earth keeps spinning at `spinScale ≈ 0.55` for the next 7.25 s, so the target azimuth is sampled before the descent begins | `camera-director.js` construction order; `earth.getRegionAzElTilt()` | **Suspected defect — visual impact not measured** |
+| Q4 | **Region target drift — azimuth resolved.** `buildRegionSequence()` still captures `regionElTilt` at click time, but the region approach sets `regionTrack = true`; `apply()` re-samples `earth.getRegionAzElTilt().az` every frame and eases `az` toward it, so the descent stays radial while Earth spins. Elevation drift remains but is small and does not affect the lateral path | `camera-director.js → apply/buildRegionSequence`; `earth.getRegionAzElTilt()` | Azimuth resolved; elevation drift accepted |
 | Q5 | **Composition persists after interrupt.** `restoreSolarState()` does not reset `focus`, `offX`, or `offY`. Interrupting near the region leaves the look target biased toward the region point and the framing offset applied | `camera-director.js → restoreSolarState` | Confirmed source fact |
 | Q6 | Completion ordering differs between paths: the flight paths clear `locked` then call back; the return path also calls `setState(SOLAR_SYSTEM)` between them | `camera-director.js` onComplete blocks | Confirmed source fact |
 | Q7 | **Return has no `pendingComplete`.** `returnToSolarSystem()` passes its callback directly to the timeline, so `killTimeline()` cannot route it, and an interrupted return never fires it. Panel restoration then depends entirely on `onUserIntent()` | `camera-director.js → returnToSolarSystem` | **Suspected defect — relies on a second code path** |

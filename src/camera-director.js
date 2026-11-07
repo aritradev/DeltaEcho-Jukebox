@@ -49,9 +49,11 @@ export class CameraDirector {
     this.spinScale = 0.55;
     this.cloudOpacity = CLOUDS.opacity.solarRest;
     this.veil = 0;
+    this.cloudPass = 0;
     this.regionVisibility = 0;
     this.coronaScale = 1;
     this.orbitLineFade = 0;
+    this.regionTrack = false;
 
     const asia = ATLAS.levels.asia.start;
     const coxs = ATLAS.levels.coxs.start;
@@ -142,9 +144,25 @@ export class CameraDirector {
     return from + delta;
   }
 
-  apply() {
+  apply(delta = 1 / 60) {
     const { camera, rig } = this;
     const center = this.earth.center;
+
+    // During the final approach the camera must stay radially above the
+    // region while Earth keeps turning. Follow the live region azimuth
+    // instead of a value sampled when the timeline was built; that is what
+    // turns the descent from a sideways arc into a straight dive.
+    if (this.regionTrack) {
+      const { az, el } = this.earth.getRegionAzElTilt();
+      const targetAz = this.nearestAligned(rig.az, az);
+      const k = 1 - Math.exp(-Math.max(delta, 0) / 0.3);
+      rig.az += (targetAz - rig.az) * k;
+      // The approach tween owns elevation until it ends; after that, track the
+      // live value too so the camera stays on the region's radial normal.
+      if (this.state === STATES.CLOUD_ENTRY) {
+        rig.el += (el + REGION_EL - rig.el) * k;
+      }
+    }
 
     sphericalToVector3(rig.dist * EARTH.radius, rig.az, rig.el, this._local);
     this._pos.copy(this._local).applyQuaternion(this.earth.orbitFrameQuaternion(this._quat)).add(center);
@@ -178,13 +196,12 @@ export class CameraDirector {
   buildRegionSequence(tl, time) {
     const rig = this.rig;
     this.refreshRegionTilt();
-    const alignAz = this.nearestAligned(rig.az, this.regionAzTilt);
     const approach = T.regionApproach;
     const cloud = T.cloudEntry;
 
     this.scheduleState(tl, STATES.REGION_APPROACH, time);
+    tl.call(() => { this.regionTrack = true; }, null, time);
     tl.to(rig, { dist: 1.44, duration: approach, ease: 'power2.in' }, time);
-    tl.to(rig, { az: alignAz, duration: approach, ease: 'power2.inOut' }, time);
     tl.to(rig, { el: this.regionElTilt + REGION_EL, duration: approach, ease: 'power2.inOut' }, time);
     tl.to(rig, { fov: 47, duration: approach, ease: 'power2.inOut' }, time);
     tl.to(rig, { focus: 1, duration: approach * 0.8, ease: 'power2.inOut' }, time);
@@ -196,10 +213,11 @@ export class CameraDirector {
 
     let t = time + approach;
     this.scheduleState(tl, STATES.CLOUD_ENTRY, t);
-    tl.to(rig, { dist: 1.052, duration: cloud, ease: 'power1.in' }, t);
+    tl.to(rig, { dist: 1.045, duration: cloud, ease: 'power1.in' }, t);
     tl.to(rig, { fov: 53, duration: cloud, ease: 'power1.in' }, t);
     tl.to(rig, { offX: 0, offY: 0.03, duration: cloud, ease: 'power1.in' }, t);
-    tl.to(this, { veil: 0.9, duration: cloud * 0.55, ease: 'power2.in' }, t);
+    tl.to(this, { veil: 0.78, duration: cloud * 0.55, ease: 'power2.in' }, t);
+    tl.to(this, { cloudPass: 1, duration: cloud * 0.5, ease: 'power2.in' }, t);
     tl.to(this, { cloudOpacity: CLOUDS.opacity.cloudEntry, duration: cloud * 0.5, ease: 'power1.in' }, t);
     tl.to(this, { regionVisibility: 0.1, duration: cloud * 0.5, ease: 'power2.in' }, t);
 
@@ -207,14 +225,19 @@ export class CameraDirector {
     const asia = ATLAS.levels.asia;
     const coxs = ATLAS.levels.coxs;
 
-    // The veil is still up from cloud entry: the globe hands over to the flat
+    // The 3D cloud pass is still dense here: the globe hands over to the flat
     // Asia map underneath it, so the swap is never seen.
     this.scheduleState(tl, STATES.CONTINENT, t);
+    tl.call(() => { this.regionTrack = false; }, null, t);
     tl.set(this.atlasA, { u: asia.start.u, v: asia.start.v, zoom: asia.start.zoom }, t);
     tl.set(this.atlasB, { opacity: 0 }, t);
-    tl.to(this.atlasA, { opacity: 1, duration: T.continent * 0.5, ease: 'power2.out' }, t);
+    // Cut to the atlas under the cloud cover. A crossfade would let the
+    // globe's atmosphere limb show through the half-opaque map as a bright
+    // diagonal seam; the cloud pass is still dense enough to hide the cut.
+    tl.set(this.atlasA, { opacity: 1 }, t);
     tl.to(this.atlasA, { zoom: asia.start.zoom * 1.15, duration: T.continent, ease: 'sine.inOut' }, t);
     tl.to(this, { veil: 0, duration: T.continent * 0.78, ease: 'power2.out' }, t);
+    tl.to(this, { cloudPass: 0, duration: T.continent * 0.85, ease: 'power2.out' }, t + T.continent * 0.08);
     tl.to(this, { cloudOpacity: CLOUDS.opacity.regionReveal, duration: T.continent * 0.7, ease: 'power1.out' }, t);
 
     t += T.continent;
@@ -245,13 +268,14 @@ export class CameraDirector {
 
   beginFlight(onComplete) {
     this.killTimeline();
+    this.cloudPass = 0;
     this.locked = true;
     this.pendingComplete = onComplete || null;
 
     const rig = this.rig;
     this.refreshRegionTilt();
     const startAz = rig.az;
-    const orbitAz = this.nearestAligned(startAz, this.regionAzTilt + 0.3);
+    const orbitAz = this.nearestAligned(startAz, this.regionAzTilt);
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -294,6 +318,7 @@ export class CameraDirector {
 
   continueToRegion(onComplete) {
     this.killTimeline();
+    this.cloudPass = 0;
     this.locked = true;
     this.pendingComplete = onComplete || null;
     const tl = gsap.timeline({
@@ -316,6 +341,7 @@ export class CameraDirector {
   // the destination. `onComplete` fires when the reveal is visible.
   skipToRegion(onComplete) {
     this.killTimeline();
+    this.cloudPass = 0;
     this.locked = false;
     this.pendingComplete = null;
     this.refreshRegionTilt();
@@ -382,6 +408,7 @@ export class CameraDirector {
     gsap.to(this, {
       spinScale: options.spinScale ?? 0.55,
       cloudOpacity: options.cloudOpacity ?? CLOUDS.opacity.freeOrbit,
+      cloudPass: 0,
       regionVisibility: options.regionVisibility ?? 0.85,
       orbitLineFade: 1,
       duration,
@@ -389,7 +416,7 @@ export class CameraDirector {
     });
   }
 
-  returnToSolarSystem(onComplete) {
+  returnToSolarSystem(onComplete, throughClouds = false) {
     this.killTimeline();
     this.locked = true;
     const rig = this.rig;
@@ -408,6 +435,13 @@ export class CameraDirector {
     tl.to([this.atlasA, this.atlasB], { opacity: 0, duration: scaled(0.9), ease: 'power2.in' }, 0);
     tl.to(this, { regionVisibility: 0, duration: scaled(1.8), ease: 'power2.in' }, 0);
     tl.to(this, { veil: 0, duration: scaled(1.2) }, 0);
+    if (throughClouds) {
+      // The cloud pass is already rising during exitAtlas's plate fade; here it
+      // thins out as the camera climbs away from the surface.
+      tl.to(this, { cloudPass: 0, duration: scaled(3.4), ease: 'power1.inOut' }, 0);
+    } else {
+      tl.to(this, { cloudPass: 0, duration: scaled(0.8), ease: 'power2.out' }, 0);
+    }
     tl.to(this, { cloudOpacity: CLOUDS.opacity.returnReveal, duration: scaled(2.2), ease: 'power1.inOut' }, 0);
     tl.to(this, { spinScale: 0.55, duration: scaled(2), ease: 'power2.out' }, 0);
     tl.to(rig, { dist: 2.6, fov: 44, offX: 0, offY: 0.023, duration: scaled(3.2), ease: 'power2.inOut' }, 0);
@@ -448,6 +482,9 @@ export class CameraDirector {
     this.killTimeline();
     const duration = scaled(0.5);
     gsap.to(this, { veil: 1, duration, ease: 'power2.in' });
+    // Start the cloud pass while the plate is still fading, so the map→globe
+    // handover is hidden and the return reads as climbing back through clouds.
+    gsap.to(this, { cloudPass: 1, duration, ease: 'power2.in' });
     return gsap.to([this.atlasA, this.atlasB], {
       opacity: 0,
       duration,
@@ -463,7 +500,8 @@ export class CameraDirector {
         this.atlasB.u = coxs.u;
         this.atlasB.v = coxs.v;
         this.atlasB.zoom = coxs.zoom;
-        this.returnToSolarSystem(onComplete);
+        // Leaving the map: climb back out through the cloud pass.
+        this.returnToSolarSystem(onComplete, true);
       }
     });
   }
@@ -472,6 +510,9 @@ export class CameraDirector {
     if (this.timeline) this.timeline.kill();
     this.timeline = null;
     this.pendingComplete = null;
+    this.regionTrack = false;
+    // `cloudPass` is deliberately left alone here: an interrupt mid-entry
+    // fades it out through restoreSolarState instead of popping the clouds off.
     gsap.killTweensOf(this.rig);
     gsap.killTweensOf(this);
     gsap.killTweensOf(this.atlasA);
@@ -490,6 +531,7 @@ export class CameraDirector {
       regionVisibility: 0,
       coronaScale: 1,
       veil: 0,
+      cloudPass: 0,
       cloudOpacity: CLOUDS.opacity.solarRest,
       spinScale: 0.55,
       duration,

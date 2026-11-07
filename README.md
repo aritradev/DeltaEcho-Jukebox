@@ -64,6 +64,7 @@ repository root, rejects traversal outside it, sets content types, and sends
 │   ├── earth.js            Earth surface, night lights, clouds, atmosphere shader
 │   ├── region.js           Cox's Bazar marker, beam, particles, hotspot hit area
 │   ├── atlas.js            Flat map stage: camera-attached plates, window math
+│   ├── cloud-pass.js       Camera-space cloud billboards for the globe→map handoff
 │   ├── camera-director.js  Keyframed camera states and transitions
 │   ├── controls.js         Drag-to-rotate and scroll-to-zoom input
 │   ├── space-dive.js       WebGL2 dive effect for the loading screen
@@ -102,17 +103,20 @@ The journey is a fixed sequence defined in `STATES` (`src/config.js`), driven by
 | `earth orbit` | Earth fills the frame; clouds and atmosphere strengthen |
 | `region approach` | Descent toward Cox's Bazar |
 | `cloud entry` | Passes through the cloud layer |
-| `continent` | Globe hands over to the flat Asia map behind the veil |
+| `continent` | Globe hands over to the flat Asia map behind the cloud pass |
 | `country` | Map dives onto Bangladesh |
 | `locality` | Beach plate settles on Cox's Bazar; destination card shown |
 
 The last three stages are a flat-map stage, not a camera move: `src/atlas.js` draws
 two camera-attached plates and animates only their texture windows, so the camera
-keeps a single writer. Drag and scroll are inert once the map appears; Back and
-Escape return to the solar system.
+keeps a single writer. The globe→map swap is hidden by `src/cloud-pass.js`, a
+camera-space cloud field that is faded out over the map. Drag and scroll are inert
+once the map appears; Back and Escape return to the solar system.
 
 User input (drag/scroll) hands control to `ExplorerControls` while the globe is on
-screen. Returning via the on-screen back button replays the reverse framing.
+screen. Returning via the on-screen back button replays the reverse framing, and the
+cloud pass fades in as the map dissolves so the climb back out passes through the
+same cloud layer.
 
 ### Configuration
 
@@ -129,7 +133,9 @@ editing that file over scattering magic numbers through modules.
 `src/config.js`.
 
 `smoke.png` is the cloud sprite that the nebula sky is painted from; the backdrop
-is baked from it once at startup, so no other sky image is needed at runtime.
+is baked from it once at startup, so no other sky image is needed at runtime. The
+cloud pass generates its puff and cloud-field textures procedurally, so it adds no
+files to the asset manifest.
 
 The map stage uses two plates:
 

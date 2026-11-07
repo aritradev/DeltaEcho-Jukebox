@@ -8,6 +8,7 @@ import { SolarSystem } from './solar-system.js';
 import { Earth } from './earth.js';
 import { RegionMarker } from './region.js';
 import { Atlas } from './atlas.js';
+import { CloudPass } from './cloud-pass.js';
 import { CameraDirector } from './camera-director.js';
 import { ExplorerControls } from './controls.js';
 import { SpaceDive } from './space-dive.js';
@@ -136,6 +137,9 @@ class App {
 
     this.atlas = new Atlas(this.camera, this.textures);
     this.camera.add(this.atlas.group);
+
+    this.cloudPass = new CloudPass(this.camera, this.textures);
+    this.camera.add(this.cloudPass.group);
 
     this.director.apply();
     this.ui.setReadoutState(`01 \u00b7 ${STATES.SOLAR_SYSTEM.name}`);
@@ -422,9 +426,10 @@ class App {
     this.sunLight.position.copy(this.solar.sunPosition);
 
     this.controls.update(delta);
-    this.director.apply();
+    this.director.apply(delta);
     this.atlas.sync([this.director.atlasA, this.director.atlasB]);
     this.atlas.update();
+    this.cloudPass.update(delta, this.director.cloudPass);
     this.scene.updateMatrixWorld(true);
 
     this.updateHotspot(delta);
