@@ -35,6 +35,9 @@ $env:PORT = 8080
 node server.mjs
 ```
 
+If the chosen port is already taken, the server walks forward to the next free one
+and prints the URL it actually bound to (up to 10 attempts).
+
 ### Why a server instead of opening `index.html`
 
 The app uses ES modules, an import map, and `fetch`-loaded textures. Browsers

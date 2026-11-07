@@ -4,7 +4,10 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('.', import.meta.url)));
-const port = Number(process.env.PORT) || 5173;
+const DEFAULT_PORT = 5173;
+const MAX_FALLBACKS = 10;
+let port = Number(process.env.PORT) || DEFAULT_PORT;
+let fallbacks = 0;
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -43,6 +46,23 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(port, () => {
+server.on('listening', () => {
   console.log(`Earth Information Jukebox running at http://localhost:${port}/`);
 });
+
+// If the requested port is busy (another dev server, a stale process), walk
+// forward until a free one is found instead of crashing.
+server.on('error', (error) => {
+  if (error.code === 'EADDRINUSE' && fallbacks < MAX_FALLBACKS) {
+    fallbacks += 1;
+    const busy = port;
+    port += 1;
+    console.warn(`Port ${busy} is in use, trying ${port}...`);
+    server.listen(port);
+    return;
+  }
+  console.error(`Server error: ${error.message}`);
+  process.exitCode = 1;
+});
+
+server.listen(port);

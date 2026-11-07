@@ -109,7 +109,7 @@ design. They are accepted; never edit that file to silence them.
 Run the app and walk the checklist:
 
 ```powershell
-node server.mjs   # http://localhost:5173
+node server.mjs   # prints the bound URL; falls back if 5173 is taken
 ```
 
 Minimum bar for any visible change:
