@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Earth Information Jukebox — Phase 2 alpha</title>
-<meta name="description" content="A cinematic Solar System to Earth to region visual prototype." />
+<meta name="description" content="A cinematic Solar System to Earth journey through six Bangladesh destinations, with environmental sonification." />
 <link rel="stylesheet" href="./styles.css" />
 <script type="importmap">
 {
@@ -40,53 +40,64 @@
 
 <aside id="panel" class="panel">
   <div class="panel-inner">
-    <p class="eyebrow">Explore Earth</p>
-    <h1 class="panel-title">What do you<br />want to hear?</h1>
 
-    <nav class="choices" id="choices">
-      <button class="choice" data-key="ocean">
-        <span class="glyph">&#127754;</span>
-        <span class="choice-body">
-          <span class="choice-name">Ocean</span>
-          <span class="choice-desc">Listen to Earth's oceans</span>
-        </span>
-        <span class="choice-tick"></span>
-      </button>
-      <button class="choice" data-key="atmosphere">
-        <span class="glyph">&#127783;</span>
-        <span class="choice-body">
-          <span class="choice-name">Atmosphere</span>
-          <span class="choice-desc">Listen to Earth's atmosphere</span>
-        </span>
-        <span class="choice-tick"></span>
-      </button>
-      <button class="choice" data-key="land">
-        <span class="glyph">&#127793;</span>
-        <span class="choice-body">
-          <span class="choice-name">Land</span>
-          <span class="choice-desc">Listen to Earth's land</span>
-        </span>
-        <span class="choice-tick"></span>
-      </button>
-    </nav>
+    <section class="panel-view" id="places-view">
+      <h1 class="panel-title">Where would you<br />like to listen?</h1>
 
-    <div class="divider"><span>or</span></div>
+      <div class="search">
+        <svg class="search-glyph" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <circle cx="7" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.2" />
+          <line x1="10.4" y1="10.4" x2="14" y2="14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+        </svg>
+        <input id="search-input" class="search-input" type="text" placeholder="Search places&hellip;" autocomplete="off" spellcheck="false" aria-label="Search places" />
+        <button id="search-clear" class="search-clear" type="button" aria-label="Clear search" hidden>&#215;</button>
+        <kbd class="search-key" aria-hidden="true">/</kbd>
+      </div>
 
-    <button class="place" id="place-btn">
-      <span class="place-label">Explore a place</span>
-      <span class="place-name">Cox's Bazar</span>
-      <span class="place-meta">1 region available</span>
-    </button>
+      <div class="panel-scroll" id="place-scroll">
+        <div id="place-list" class="place-list" role="listbox" aria-label="Destinations"></div>
+      </div>
 
-    <p class="panel-foot">
-      <span class="key-hint"><b>drag</b> rotate</span>
-      <span class="key-hint"><b>scroll</b> zoom</span>
-    </p>
+      <p class="panel-foot">
+        <span class="key-hint"><b>&uarr;&darr;</b> move</span>
+        <span class="key-hint"><b>&crarr;</b> select</span>
+        <span class="key-hint"><b>/</b> search</span>
+      </p>
+    </section>
+
+    <section class="panel-view" id="signals-view" hidden>
+      <p class="eyebrow" id="signal-country">Bangladesh</p>
+      <h1 class="panel-title" id="signal-region">Cox's Bazar</h1>
+
+      <div class="signal-head">
+        <span>Sound layers</span>
+        <span id="signal-count">10 of 10 on</span>
+      </div>
+
+      <div class="panel-scroll" id="signal-scroll">
+        <div id="signal-list" class="signal-list"></div>
+      </div>
+
+      <div class="yearbar">
+        <div class="year-row">
+          <span id="year-min">1985</span>
+          <span class="year-current" id="year-label">1985</span>
+          <span id="year-max">2026</span>
+        </div>
+        <input id="year-input" class="year-input" type="range" min="1985" max="2026" step="1" value="1985" aria-label="Listening year" />
+        <div class="year-actions">
+          <button id="play-1985" class="year-btn" type="button">Play 1985</button>
+          <button id="compare-btn" class="year-btn year-btn-wide" type="button">Compare 1985 &harr; 2025</button>
+          <button id="play-2025" class="year-btn" type="button">Play 2025</button>
+        </div>
+      </div>
+    </section>
+
   </div>
 </aside>
 
 <div id="selection-note" class="selection-note" aria-live="polite">
-  <span class="sn-eyebrow" id="sn-eyebrow">Ocean</span>
+  <span class="sn-eyebrow" id="sn-eyebrow">Explore Earth</span>
   <span class="sn-line">Let's find somewhere to listen.</span>
   <span class="sn-dest" id="sn-dest">Destination available · Cox's Bazar</span>
 </div>
@@ -125,8 +136,9 @@
 
 <div id="hint" class="hint" aria-live="polite"></div>
 
-<button id="skip-btn" class="skip-btn" type="button" aria-label="Skip the cinematic and reveal Cox's Bazar" disabled>
+<button id="skip-btn" class="skip-btn" type="button" aria-label="Skip the cinematic and reveal the destination (Esc)" title="Skip (Esc)" disabled>
   <span class="skip-label">Skip</span>
+  <span class="skip-key" aria-hidden="true">Esc</span>
   <span class="skip-arrow" aria-hidden="true">&#8594;</span>
 </button>
 
@@ -140,7 +152,7 @@
     </p>
     <p class="loader-sub" id="loader-sub">Preparing the observatory&hellip;</p>
     <div class="loader-track"><span class="loader-fill" id="loader-fill"></span></div>
-    <p class="loader-foot">Visual prototype &middot; no audio in this phase</p>
+    <p class="loader-foot">Champion Edition &middot; synthesized environmental audio</p>
   </div>
 </div>
 

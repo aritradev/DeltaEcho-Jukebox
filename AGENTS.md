@@ -17,8 +17,9 @@ Read this first, then the document that matches your task:
 ## Project snapshot
 
 - **Phase 2 alpha** of the Earth Information Jukebox: a cinematic Solar System →
-  Earth → Cox's Bazar visual prototype, ending on a flat continent/locality map
-  stage after the cloud entry.
+  Earth → destination journey across six Bangladesh regions from the Champion
+  Edition dataset, ending on a flat map stage with a signal panel and Web Audio
+  sonification.
 - Vanilla JavaScript ES modules. No framework, no bundler, no transpiler.
 - No npm dependencies. Three.js and GSAP are vendored (versions in `README.md`).
 - No backend. `server.mjs` is a static file server for local development only.
@@ -82,12 +83,15 @@ There is no `npm install`, no `npm test`, and no `npm run build`.
 | Camera choreography and transitions | `src/camera-director.js` |
 | Input handling (drag, zoom, pinch) | `src/controls.js` |
 | Earth materials, clouds, atmosphere | `src/earth.js` |
-| Region marker geometry and shaders | `src/region.js` |
-| Flat map windows and zoom | `src/atlas.js` + `ATLAS` in `src/config.js` |
+| Region marker geometry, shaders, retargeting | `src/region.js` |
+| Destination list, colours, yearly signals | `src/regions.js` (generated) |
+| Source dataset or signal metadata | `assets/data/*.json` + `tools/build-regions.mjs` |
+| Flat map windows, zoom, placeholder plates | `src/atlas.js` + `ATLAS` in `src/config.js` |
 | Sun surface, corona, flares | `src/sun.js` |
 | Planet orbits, Saturn ring, orbit lines | `src/solar-system.js` |
 | Nebula sky backdrop and stars | `src/starfield.js` |
 | Texture loading | `src/assets.js` |
+| Web Audio layers and scheduling | `src/signal-audio.js` |
 | Overlay text, buttons, layout | `index.html` + `ui.js` |
 | Overlay appearance | `styles.css` |
 | App wiring, modes, render loop | `src/main.js` |
@@ -110,14 +114,21 @@ No automated tests exist. Before calling a change done:
 2. The loader completes and auto-reveals the solar system.
 3. Console has no errors or WebGL shader compile failures.
 4. The intro dolly completes and the solar system is framed.
-5. Selecting Ocean / Atmosphere / Land flies to the region and shows the
-   destination card.
-6. Dragging rotates, scrolling zooms, and interrupting a flight restores manual
-   control.
-7. The back button (and Escape, once in the region) returns to the solar system.
-8. Clicking Earth from the wide view enters free orbit.
-9. Resizing the window keeps the scene and overlays aligned.
-10. `git status` shows only the files you intended to change.
+5. The place explorer lists all six destinations; search narrows the list,
+   clearing it restores the country group, `/` focuses search, and the arrow keys
+   plus Enter move through and select destinations.
+6. Selecting each destination flies to it, reaches `locality`, and shows the
+   signal panel with the correct values. Cox's Bazar uses the real plate; the
+   other five use placeholder plates.
+7. Signal toggles silence/restore their layer, the year slider changes values and
+   audio, and Compare alternates 1985/2025.
+8. Dragging rotates, scrolling zooms, and interrupting a flight restores manual
+   control (and stops audio). Escape during an outbound flight skips it.
+9. The back button (and Escape, once in the region) returns to the solar system
+   and suspends audio.
+10. Clicking Earth from the wide view enters free orbit.
+11. Resizing the window keeps the scene and overlays aligned.
+12. `git status` shows only the files you intended to change.
 
 If your change touches shaders, also check on a second GPU or browser if possible;
 shader issues often appear only on one driver.
@@ -134,6 +145,8 @@ shader issues often appear only on one driver.
 | Region label drifts | Anchor must be positioned by projecting world space, not fixed CSS |
 | Region appears on the wrong side of Earth | Used untilted queries; use `getRegionAzElTilt` / `getLocalSunDirectionTilt` |
 | Motion explodes after tab switch | `delta` must stay clamped (`Math.min(delta, 0.05)`) |
+| Region values or destinations are stale | `src/regions.js` is generated; edit the JSON or `tools/build-regions.mjs`, then run `node tools/build-regions.mjs` |
+| Audio is silent after reload | `AudioContext` must be created/resumed in a user gesture; selection clicks call `SignalAudio.start()` |
 | Git reports whitespace warnings | Expected in `vendor/gsap/CSSPlugin.js`; do not fix |
 
 ---

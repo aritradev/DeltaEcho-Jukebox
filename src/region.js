@@ -184,9 +184,9 @@ function buildCapGeometry(radius, capAngle, segments, rings) {
 }
 
 export class RegionMarker {
-  constructor(earth) {
+  constructor(earth, config = REGION) {
     this.earth = earth;
-    this.config = REGION;
+    this.config = config;
     this.time = 0;
     this.intensity = 0;
     this.hover = 0;
@@ -199,7 +199,7 @@ export class RegionMarker {
     this._scratchNormal = new THREE.Vector3();
 
     this.root = new THREE.Group();
-    const dir = latLonToVector3(REGION.lat, REGION.lon, 1);
+    const dir = latLonToVector3(config.lat, config.lon, 1);
     this.localDirection = dir.clone();
     this.root.position.copy(dir.clone().multiplyScalar(earth.radius * REGION.shellScale));
     this.root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
@@ -214,6 +214,16 @@ export class RegionMarker {
     this.buildParticles();
     this.buildReticle();
     this.buildHitTarget();
+  }
+
+  // Moves the existing marker to another region without rebuilding its
+  // geometry. All six regions share the same cap, beam and particle shape.
+  setRegion(config) {
+    this.config = config;
+    const dir = latLonToVector3(config.lat, config.lon, 1);
+    this.localDirection.copy(dir);
+    this.root.position.copy(dir.clone().multiplyScalar(this.earth.radius * REGION.shellScale));
+    this.root.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
   }
 
   buildFootprint() {

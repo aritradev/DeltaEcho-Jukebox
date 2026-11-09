@@ -1,5 +1,27 @@
 import { gsap } from '../vendor/gsap/index.js';
-import { CATEGORIES, REGION } from './config.js';
+import { REGIONS, COUNTRIES, SIGNALS, YEAR_RANGE } from './regions.js';
+
+const countryById = Object.fromEntries(COUNTRIES.map((country) => [country.id, country]));
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function normalise(value) {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/['\u2019-]/g, '');
+}
+
+function formatCoord(value, positive, negative) {
+  return `${Math.abs(value).toFixed(2)}\u00b0${value >= 0 ? positive : negative}`;
+}
 
 export class UI {
   constructor(handlers) {
@@ -11,14 +33,31 @@ export class UI {
       masthead: document.getElementById('masthead'),
       readout: document.getElementById('readout'),
       roState: document.getElementById('ro-state'),
+      roTarget: document.getElementById('ro-target'),
       panel: document.getElementById('panel'),
-      choices: document.getElementById('choices'),
-      placeBtn: document.getElementById('place-btn'),
+      placesView: document.getElementById('places-view'),
+      signalsView: document.getElementById('signals-view'),
+      searchInput: document.getElementById('search-input'),
+      searchClear: document.getElementById('search-clear'),
+      placeList: document.getElementById('place-list'),
+      placeScroll: document.getElementById('place-scroll'),
+      signalList: document.getElementById('signal-list'),
+      signalCountry: document.getElementById('signal-country'),
+      signalRegion: document.getElementById('signal-region'),
+      signalCount: document.getElementById('signal-count'),
+      yearLabel: document.getElementById('year-label'),
+      yearInput: document.getElementById('year-input'),
+      yearMin: document.getElementById('year-min'),
+      yearMax: document.getElementById('year-max'),
+      play1985: document.getElementById('play-1985'),
+      play2025: document.getElementById('play-2025'),
+      compareBtn: document.getElementById('compare-btn'),
       note: document.getElementById('selection-note'),
       noteEyebrow: document.getElementById('sn-eyebrow'),
       noteLine: document.querySelector('.sn-line'),
       noteDest: document.getElementById('sn-dest'),
       anchor: document.getElementById('anchor'),
+      anchorName: document.querySelector('#anchor .anchor-copy strong'),
       destination: document.getElementById('destination'),
       backbar: document.getElementById('backbar'),
       backBtn: document.getElementById('back-btn'),
@@ -32,27 +71,368 @@ export class UI {
     this.hintTimer = null;
     this.veilNoiseReady = false;
     this.veilNoiseScheduled = false;
-    this.buildChoices();
+
+    this.panelEnabled = false;
+    this.query = '';
+    this.expanded = new Set(COUNTRIES.map((country) => country.name));
+    this.visibleRows = [];
+    this.selectedIndex = 0;
+    this.activeRegion = null;
+    this.activeYear = YEAR_RANGE.start;
+    this.enabledSignals = new Set(SIGNALS.map((signal) => signal.key));
+    this.signalRows = new Map();
+    this.compareTimer = null;
+    this.compareIndex = 0;
+
+    this.el.yearInput.min = String(YEAR_RANGE.start);
+    this.el.yearInput.max = String(YEAR_RANGE.end);
+    this.el.yearMin.textContent = String(YEAR_RANGE.start);
+    this.el.yearMax.textContent = String(YEAR_RANGE.end);
+
+    this.buildSignalList();
+    this.renderPlaces();
     this.bind();
   }
 
-  buildChoices() {
-    this.choiceButtons = [...this.el.choices.querySelectorAll('.choice')].map((button) => {
-      const category = CATEGORIES.find((c) => c.key === button.dataset.key);
-      button.querySelector('.glyph').textContent = category.glyph;
-      button.addEventListener('click', () => {
-        if (button.classList.contains('active')) return;
-        this.handlers.onSelect(category);
+  // ---------------------------------------------------------------- places
+
+  matches(region, query) {
+    const haystack = normalise(
+      [region.name, region.fullName, region.short, region.category, region.country].join(' ')
+    );
+    return haystack.includes(query);
+  }
+
+  createRegionRow(region) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'region-row';
+    row.dataset.id = region.id;
+    row.setAttribute('role', 'option');
+    row.innerHTML = [
+      `<span class="region-name">${escapeHtml(region.name)}</span>`,
+      `<span class="region-meta">${escapeHtml(region.short)}</span>`,
+      '<span class="region-chevron" aria-hidden="true">\u203a</span>'
+    ].join('');
+    row.addEventListener('click', () => this.chooseRegion(region));
+    row.addEventListener('focus', () => {
+      const index = this.visibleRows.findIndex((item) => item.id === region.id);
+      if (index >= 0) {
+        this.selectedIndex = index;
+        this.applySelection();
+      }
+    });
+    return row;
+  }
+
+  renderPlaces() {
+    const list = this.el.placeList;
+    list.innerHTML = '';
+    this.visibleRows = [];
+    const query = normalise(this.query);
+    const matches = REGIONS.filter((region) => !query || this.matches(region, query));
+
+    if (!matches.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.innerHTML = [
+        '<p class="empty-title">No places found</p>',
+        '<p class="empty-copy">Try another place or region.</p>',
+        '<button class="empty-clear" type="button">Clear search</button>'
+      ].join('');
+      empty.querySelector('.empty-clear').addEventListener('click', () => this.clearSearch(true));
+      list.appendChild(empty);
+      return;
+    }
+
+    const grouped = new Map();
+    for (const region of matches) {
+      if (!grouped.has(region.country)) grouped.set(region.country, []);
+      grouped.get(region.country).push(region);
+    }
+
+    for (const [country, regions] of grouped) {
+      const group = document.createElement('div');
+      group.className = 'country-group';
+
+      const head = document.createElement('button');
+      head.type = 'button';
+      head.className = 'group-head';
+      const open = query ? true : this.expanded.has(country);
+      head.setAttribute('aria-expanded', String(open));
+      head.innerHTML = [
+        `<span class="group-toggle" aria-hidden="true">${open ? '\u25be' : '\u25b8'}</span>`,
+        `<span class="group-name">${escapeHtml(country)}</span>`,
+        `<span class="group-count">${String(regions.length).padStart(2, '0')}</span>`
+      ].join('');
+      head.addEventListener('click', () => {
+        if (this.query) return;
+        if (this.expanded.has(country)) this.expanded.delete(country);
+        else this.expanded.add(country);
+        this.renderPlaces();
       });
-      return button;
+      group.appendChild(head);
+
+      const body = document.createElement('div');
+      body.className = 'group-body';
+      body.hidden = !open;
+      for (const region of regions) {
+        body.appendChild(this.createRegionRow(region));
+        this.visibleRows.push(region);
+      }
+      group.appendChild(body);
+      list.appendChild(group);
+    }
+
+    this.selectedIndex = Math.min(this.selectedIndex, Math.max(0, this.visibleRows.length - 1));
+    this.applySelection();
+  }
+
+  applySelection() {
+    const rows = this.el.placeList.querySelectorAll('.region-row');
+    const target = this.visibleRows[this.selectedIndex];
+    rows.forEach((row) => {
+      const active = Boolean(target) && row.dataset.id === target.id;
+      row.classList.toggle('active', active);
+      row.setAttribute('aria-selected', String(active));
     });
   }
 
+  moveSelection(delta, focus = false) {
+    if (!this.visibleRows.length) return;
+    const count = this.visibleRows.length;
+    this.selectedIndex = (this.selectedIndex + delta + count) % count;
+    this.applySelection();
+    const row = this.el.placeList.querySelector(`.region-row[data-id="${this.visibleRows[this.selectedIndex].id}"]`);
+    if (!row) return;
+    row.scrollIntoView({ block: 'nearest' });
+    if (focus) row.focus({ preventScroll: true });
+  }
+
+  chooseRegion(region) {
+    if (!this.panelEnabled) return;
+    this.setActiveRegion(region);
+    this.handlers.onSelect(region);
+  }
+
+  setActiveRegion(region) {
+    this.activeRegion = region || null;
+    if (!region) {
+      this.applySelection();
+      return;
+    }
+    const index = this.visibleRows.findIndex((item) => item.id === region.id);
+    if (index >= 0) this.selectedIndex = index;
+    this.applySelection();
+    this.setReadoutTarget(region);
+  }
+
+  setQuery(value) {
+    this.query = value;
+    this.selectedIndex = 0;
+    this.el.searchClear.hidden = !value;
+    this.renderPlaces();
+  }
+
+  clearSearch(focus = false) {
+    this.el.searchInput.value = '';
+    this.setQuery('');
+    if (focus) this.el.searchInput.focus();
+  }
+
+  // ---------------------------------------------------------------- signals
+
+  buildSignalList() {
+    const list = this.el.signalList;
+    list.innerHTML = '';
+    for (const signal of SIGNALS) {
+      const row = document.createElement('button');
+      row.type = 'button';
+      row.className = 'signal-row on';
+      row.dataset.key = signal.key;
+      row.setAttribute('role', 'switch');
+      row.setAttribute('aria-checked', 'true');
+      row.setAttribute('aria-label', `${signal.label}, ${signal.audio}`);
+      row.innerHTML = [
+        '<span class="signal-toggle" aria-hidden="true"></span>',
+        `<span class="signal-name">${escapeHtml(signal.label)}</span>`,
+        '<span class="signal-value">\u2014</span>'
+      ].join('');
+      row.addEventListener('click', () => {
+        if (!this.panelEnabled || row.disabled) return;
+        if (this.enabledSignals.has(signal.key)) this.enabledSignals.delete(signal.key);
+        else this.enabledSignals.add(signal.key);
+        this.renderSignals();
+        if (this.handlers.onSignalToggle) this.handlers.onSignalToggle(signal.key, this.enabledSignals.has(signal.key));
+      });
+      list.appendChild(row);
+      this.signalRows.set(signal.key, row);
+    }
+  }
+
+  formatSignal(signal) {
+    const region = this.activeRegion;
+    if (!region) return '\u2014';
+    if (region.unavailable.includes(signal.key)) return 'N/A';
+    const value = region.years[this.activeYear]?.[signal.key];
+    if (value === undefined || value === null) return 'N/A';
+    let text;
+    if (signal.key === 'rain') text = Math.round(value).toLocaleString('en-US');
+    else text = Number(value).toFixed(signal.decimals);
+    if (signal.key === 'groundwater' && value > 0) text = `+${text}`;
+    return signal.unit ? `${text} ${signal.unit}` : text;
+  }
+
+  renderSignals() {
+    if (!this.activeRegion) return;
+    this.el.signalCountry.textContent = this.activeRegion.country;
+    this.el.signalRegion.textContent = this.activeRegion.name;
+
+    for (const signal of SIGNALS) {
+      const row = this.signalRows.get(signal.key);
+      if (!row) continue;
+      const unavailable = this.activeRegion.unavailable.includes(signal.key);
+      const on = this.enabledSignals.has(signal.key);
+      row.classList.toggle('unavailable', unavailable);
+      row.classList.toggle('on', on && !unavailable);
+      row.classList.toggle('off', !on && !unavailable);
+      row.disabled = unavailable || !this.panelEnabled;
+      row.setAttribute('aria-checked', String(on && !unavailable));
+      row.setAttribute('aria-disabled', String(unavailable));
+      row.querySelector('.signal-value').textContent = this.formatSignal(signal);
+    }
+
+    const enabled = SIGNALS.filter((signal) => this.enabledSignals.has(signal.key) && !this.activeRegion.unavailable.includes(signal.key));
+    this.el.signalCount.textContent = `${enabled.length} of ${SIGNALS.length} on`;
+  }
+
+  setYear(year, fromCompare = false) {
+    if (!fromCompare) this.stopCompare();
+    const value = Math.max(YEAR_RANGE.start, Math.min(YEAR_RANGE.end, Number(year)));
+    this.activeYear = value;
+    this.el.yearInput.value = String(value);
+    this.el.yearLabel.textContent = String(value);
+    this.renderSignals();
+    if (this.handlers.onYearChange) this.handlers.onYearChange(value);
+  }
+
+  startCompare() {
+    this.stopCompare();
+    this.compareIndex = 0;
+    this.el.compareBtn.classList.add('active');
+    this.el.compareBtn.textContent = 'Stop compare';
+    this.setYear(1985, true);
+    this.compareTimer = window.setInterval(() => {
+      this.compareIndex = this.compareIndex === 0 ? 1 : 0;
+      this.setYear(this.compareIndex === 0 ? 1985 : 2025, true);
+    }, 2600);
+  }
+
+  stopCompare() {
+    if (this.compareTimer) {
+      window.clearInterval(this.compareTimer);
+      this.compareTimer = null;
+    }
+    if (this.el.compareBtn.classList.contains('active')) {
+      this.el.compareBtn.classList.remove('active');
+      this.el.compareBtn.textContent = 'Compare 1985 \u2194 2025';
+    }
+  }
+
+  toggleCompare() {
+    if (this.compareTimer) this.stopCompare();
+    else this.startCompare();
+  }
+
+  showSignals(region) {
+    if (region) this.activeRegion = region;
+    this.el.placesView.hidden = true;
+    this.el.signalsView.hidden = false;
+    this.setYear(this.activeYear, true);
+  }
+
+  showPlaces() {
+    this.el.signalsView.hidden = true;
+    this.el.placesView.hidden = false;
+  }
+
+  // ---------------------------------------------------------------- bindings
+
   bind() {
-    this.el.placeBtn.addEventListener('click', () => this.handlers.onSelect(null));
+    this.el.searchInput.addEventListener('input', () => this.setQuery(this.el.searchInput.value));
+    this.el.searchInput.addEventListener('keydown', (event) => this.onSearchKey(event));
+    this.el.searchClear.addEventListener('click', () => this.clearSearch(true));
+
+    this.el.yearInput.addEventListener('input', () => this.setYear(this.el.yearInput.value));
+    this.el.play1985.addEventListener('click', () => {
+      this.setYear(1985);
+      if (this.handlers.onPlay) this.handlers.onPlay(1985);
+    });
+    this.el.play2025.addEventListener('click', () => {
+      this.setYear(2025);
+      if (this.handlers.onPlay) this.handlers.onPlay(2025);
+    });
+    this.el.compareBtn.addEventListener('click', () => {
+      if (!this.panelEnabled) return;
+      this.toggleCompare();
+      if (this.handlers.onCompare) this.handlers.onCompare(this.compareTimer !== null);
+    });
+
     this.el.backBtn.addEventListener('click', () => this.handlers.onBack());
     this.el.skipBtn.addEventListener('click', () => this.handlers.onSkip());
+
+    window.addEventListener('keydown', (event) => this.onGlobalKey(event));
   }
+
+  onSearchKey(event) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.moveSelection(1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.moveSelection(-1);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const region = this.visibleRows[this.selectedIndex];
+      if (region) this.chooseRegion(region);
+    } else if (event.key === 'Escape') {
+      if (this.query) {
+        event.preventDefault();
+        this.clearSearch(true);
+      } else {
+        this.el.searchInput.blur();
+      }
+    }
+  }
+
+  onGlobalKey(event) {
+    if (!this.panelEnabled || this.el.placesView.hidden) return;
+    const target = event.target;
+    const tag = target && target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || (target && target.isContentEditable)) return;
+
+    if (event.key === '/') {
+      event.preventDefault();
+      this.el.searchInput.focus();
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.moveSelection(1, true);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.moveSelection(-1, true);
+    } else if (event.key === 'Enter') {
+      // Select from the list or from an unfocused page. Other buttons (group
+      // headers, clear-search) keep their native Enter behaviour.
+      const isRow = target && target.classList && target.classList.contains('region-row');
+      const isBody = !target || target === document.body;
+      if (!isRow && !isBody) return;
+      event.preventDefault();
+      const region = this.visibleRows[this.selectedIndex];
+      if (region) this.chooseRegion(region);
+    }
+  }
+
+  // ---------------------------------------------------------------- loader / panel
 
   // Building the veil noise is only needed once a flight starts, and it is
   // expensive enough to stall a frame. Keep it off the startup path and bake it
@@ -134,6 +514,10 @@ export class UI {
       .then();
   }
 
+  isSkipVisible() {
+    return !this.el.skipBtn.disabled;
+  }
+
   showSkip() {
     this.el.skipBtn.disabled = false;
     gsap.killTweensOf(this.el.skipBtn);
@@ -148,20 +532,10 @@ export class UI {
     gsap.to(this.el.skipBtn, { opacity: 0, duration, ease: 'power2.in' });
   }
 
-  setActiveCategory(key) {
-    for (const button of this.choiceButtons) {
-      const active = button.dataset.key === key;
-      button.classList.toggle('active', active);
-      button.classList.toggle('dimmed', Boolean(key) && !active);
-    }
-  }
-
-  showSelectionNote(category) {
-    this.el.noteEyebrow.textContent = category ? category.label : 'Explore a place';
-    this.el.noteLine.textContent = category
-      ? 'Let\u2019s find somewhere to listen.'
-      : 'One region is available in this build.';
-    this.el.noteDest.textContent = `Destination available \u00b7 ${REGION.label}`;
+  showSelectionNote(region) {
+    this.el.noteEyebrow.textContent = region ? region.country : 'Explore Earth';
+    this.el.noteLine.textContent = 'Let\u2019s find somewhere to listen.';
+    this.el.noteDest.textContent = region ? `Destination available \u00b7 ${region.name}` : 'Choose a place';
     gsap.killTweensOf(this.el.note);
     gsap.fromTo(
       this.el.note,
@@ -186,32 +560,48 @@ export class UI {
   }
 
   setPanelEnabled(enabled) {
-    for (const button of this.choiceButtons) button.disabled = !enabled;
-    this.el.placeBtn.disabled = !enabled;
+    this.panelEnabled = enabled;
+    this.el.searchInput.disabled = !enabled;
+    this.el.searchClear.disabled = !enabled;
+    this.el.yearInput.disabled = !enabled;
+    this.el.play1985.disabled = !enabled;
+    this.el.play2025.disabled = !enabled;
+    this.el.compareBtn.disabled = !enabled;
+    this.el.placeList.querySelectorAll('.region-row, .group-head, .empty-clear').forEach((element) => {
+      element.disabled = !enabled;
+    });
+    this.signalRows.forEach((row) => {
+      const unavailable = this.activeRegion && this.activeRegion.unavailable.includes(row.dataset.key);
+      row.disabled = !enabled || Boolean(unavailable);
+    });
+    this.renderSignals();
   }
 
-  showDestination() {
+  showDestination(region) {
     document.body.classList.add('destination-open');
-    gsap.killTweensOf(this.el.destination);
-    gsap.fromTo(
-      this.el.destination,
-      { opacity: 0, y: 24 },
-      { opacity: 1, y: 0, duration: 1.2, ease: 'power2.out' }
-    );
+    this.showSignals(region || this.activeRegion);
+    this.showPanel(0.9);
+    this.setPanelEnabled(true);
     gsap.to(this.el.backbar, { opacity: 1, duration: 0.9, delay: 0.5, ease: 'power2.out' });
     gsap.set(this.el.backbar, { pointerEvents: 'auto' });
   }
 
   hideDestination(duration = 0.9) {
+    this.stopCompare();
     document.body.classList.remove('destination-open');
-    gsap.killTweensOf(this.el.destination);
-    gsap.to(this.el.destination, { opacity: 0, y: 18, duration, ease: 'power2.in' });
+    this.showPlaces();
     gsap.to(this.el.backbar, { opacity: 0, duration: 0.6, ease: 'power2.in' });
     gsap.set(this.el.backbar, { pointerEvents: 'none' });
   }
 
   setReadoutState(name) {
     this.el.roState.textContent = name;
+  }
+
+  setReadoutTarget(region) {
+    if (!region) return;
+    this.el.roTarget.textContent = `${region.name.toLowerCase()} \u00b7 ${formatCoord(region.lat, 'N', 'S')} ${formatCoord(region.lon, 'E', 'W')}`;
+    this.el.anchorName.textContent = region.name;
   }
 
   setVeil(value) {

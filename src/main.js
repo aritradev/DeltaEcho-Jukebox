@@ -7,12 +7,14 @@ import { Starfield } from './starfield.js';
 import { SolarSystem } from './solar-system.js';
 import { Earth } from './earth.js';
 import { RegionMarker } from './region.js';
-import { Atlas } from './atlas.js';
+import { Atlas, makeRegionPlate } from './atlas.js';
+import { REGION_BY_ID } from './regions.js';
 import { CloudPass } from './cloud-pass.js';
 import { CameraDirector } from './camera-director.js';
 import { ExplorerControls } from './controls.js';
 import { SpaceDive } from './space-dive.js';
 import { UI } from './ui.js';
+import { SignalAudio } from './signal-audio.js';
 
 const MODE = {
   SOLAR: 'solar',
@@ -37,13 +39,17 @@ class App {
     this._world = new THREE.Vector3();
     this._projected = new THREE.Vector3();
     this._hit = new THREE.Vector3();
+    this.audio = new SignalAudio();
   }
 
   async init() {
     this.ui = new UI({
-      onSelect: (category) => this.onSelect(category),
+      onSelect: (region) => this.onSelect(region),
       onBack: () => this.onBack(),
-      onSkip: () => this.onSkip()
+      onSkip: () => this.onSkip(),
+      onSignalToggle: (key, on) => this.audio.setEnabled(key, on),
+      onYearChange: (year) => this.audio.setYear(year),
+      onPlay: (year) => this.audio.setYear(year)
     });
 
     this.loaderEffect = new SpaceDive(document.getElementById('loader-scene'));
@@ -120,10 +126,12 @@ class App {
     this.earthBody.tiltGroup.rotation.z = EARTH.axisTiltDeg * DEG;
     this.earth.spinAngle = EARTH.startSpinDeg * DEG;
 
-    this.region = new RegionMarker(this.earth);
+    this.currentRegion = REGION_BY_ID.coxs_bazar;
+    this.region = new RegionMarker(this.earth, this.currentRegion);
     this.region.setPixelRatio(pixelRatio);
     this.earth.setRegionLocalDirection(this.region.localDirection);
     this.earth.refresh();
+    this.ui.setReadoutTarget(this.currentRegion);
 
     this.scene.updateMatrixWorld(true);
 
@@ -188,16 +196,47 @@ class App {
     this.ui.setPanelEnabled(true);
     this.controls.setEnabled(true);
     this.director.introDolly(5.2);
-    this.ui.showHint('Select what you want to hear', 6);
+    this.ui.showHint('Select a place to listen', 6);
     window.setTimeout(() => {
       if (this.mode === MODE.SOLAR) this.ui.showHint('Or click Earth to move closer', 4.5);
     }, 8200);
   }
 
-  onSelect(category) {
-    if (!this.started || this.mode === MODE.FLYING) return;
-    this.ui.setActiveCategory(category ? category.key : 'place');
-    this.ui.showSelectionNote(category);
+  // Moves the marker, the camera target and the flat-map plate to the chosen
+  // region. The camera choreography itself is unchanged.
+  applyRegion(region) {
+    this.currentRegion = region;
+    this.region.setRegion(region);
+    this.earth.setRegionLocalDirection(this.region.localDirection);
+    this.earth.refresh();
+    this.director.setRegion(region);
+    if (region.id === 'coxs_bazar') this.atlas.restoreRegionTexture();
+    else this.atlas.setRegionTexture(makeRegionPlate(region));
+    this.ui.setReadoutTarget(region);
+    this.ui.setActiveRegion(region);
+  }
+
+  // The AudioContext has to be created or resumed inside a user gesture, so it
+  // is prepared on the selection click and only faded in once the flight lands.
+  prepareAudio() {
+    this.audio.start().catch((error) => console.warn('Audio unavailable', error));
+  }
+
+  startDestinationAudio() {
+    this.audio.setDestination(this.currentRegion);
+    this.audio.setYear(this.ui.activeYear);
+    this.audio.setEnabledSet(this.ui.enabledSignals);
+    this.audio
+      .start()
+      .then(() => this.audio.fadeIn(1.8))
+      .catch((error) => console.warn('Audio unavailable', error));
+  }
+
+  onSelect(region) {
+    if (!this.started || this.mode === MODE.FLYING || !region) return;
+    this.prepareAudio();
+    this.applyRegion(region);
+    this.ui.showSelectionNote(region);
     this.ui.setPanelEnabled(false);
     this.mode = MODE.FLYING;
     this.hotspotArmed = false;
@@ -216,9 +255,10 @@ class App {
     this.ui.setAnchor(0, 0, false);
     this.ui.hideSelectionNote();
     this.ui.hideSkip();
-    this.ui.showDestination();
+    this.ui.showDestination(this.currentRegion);
     this.controls.setEnabled(false);
-    this.ui.showHint("Cox's Bazar \u00b7 listening arrives in a later phase", 6.5);
+    this.startDestinationAudio();
+    this.ui.showHint(`${this.currentRegion.name} \u00b7 adjust the sound layers`, 6.5);
   }
 
   onBack() {
@@ -226,6 +266,10 @@ class App {
     this.mode = MODE.FLYING;
     this.hotspotArmed = false;
     this.region.setHover(0);
+    this.audio.fadeOut(0.8);
+    window.setTimeout(() => {
+      if (this.mode === MODE.SOLAR) this.audio.suspend();
+    }, 1200);
     this.ui.hideDestination(0.8);
     this.ui.hideSelectionNote();
     this.ui.setPanelEnabled(false);
@@ -234,15 +278,18 @@ class App {
       this.mode = MODE.SOLAR;
       this.skipping = false;
       this.controls.setEnabled(true);
-      this.ui.setActiveCategory(null);
+      this.ui.showPlaces();
+      this.ui.setActiveRegion(this.currentRegion);
       this.ui.showPanel(1.4);
       this.ui.setPanelEnabled(true);
       this.ui.showHint('Observatory view', 3.5);
+      this.audio.suspend();
     });
   }
 
   onSkip() {
     if (!this.started || this.skipping || this.mode !== MODE.FLYING) return;
+    if (!this.ui.isSkipVisible()) return;
     this.skipping = true;
     this.mode = MODE.FLYING;
     this.hotspotArmed = false;
@@ -255,7 +302,7 @@ class App {
     this.ui.hideSkip(0.3);
     this.controls.setEnabled(false);
     document.body.classList.remove('grab', 'pointing');
-    this.ui.showHint("Skipping to Cox's Bazar", 2.2);
+    this.ui.showHint(`Skipping to ${this.currentRegion.name}`, 2.2);
     this.director.skipToRegion(() => this.onFlightComplete());
   }
 
@@ -264,6 +311,7 @@ class App {
     if (!this.director.interrupt()) return;
     const near = this.director.rig.dist < 6;
     this.mode = near ? MODE.EXPLORE : MODE.SOLAR;
+    this.audio.fadeOut(0.5);
     this.ui.hideSkip();
     this.ui.hideSelectionNote();
     this.ui.showPanel(1.2);
@@ -299,10 +347,11 @@ class App {
   }
 
   onKey(event) {
-    if (!this.started) return;
-    if (event.key === 'Escape' && (this.mode === MODE.ATLAS || this.mode === MODE.EXPLORE)) {
-      this.onBack();
-    }
+    if (!this.started || event.key !== 'Escape') return;
+    // During an outbound flight, Escape does what the Skip control does. During
+    // the Back transition the Skip control is hidden, so this stays inert.
+    if (this.mode === MODE.FLYING) this.onSkip();
+    else if (this.mode === MODE.ATLAS || this.mode === MODE.EXPLORE) this.onBack();
   }
 
   onCanvasClick() {
@@ -331,6 +380,7 @@ class App {
     if (this.mode === MODE.ATLAS) {
       return;
     }
+    this.prepareAudio();
     this.mode = MODE.FLYING;
     this.ui.setPanelEnabled(false);
     this.ui.hideSelectionNote();
@@ -340,8 +390,10 @@ class App {
       this.mode = MODE.ATLAS;
       this.hotspotArmed = false;
       this.ui.hideSkip();
-      this.ui.showDestination();
+      this.ui.showDestination(this.currentRegion);
       this.controls.setEnabled(false);
+      this.startDestinationAudio();
+      this.ui.showHint(`${this.currentRegion.name} \u00b7 adjust the sound layers`, 6.5);
     });
   }
 
@@ -350,7 +402,7 @@ class App {
     this.hotspotArmed = true;
     this.director.enterFreeOrbit({ keepAz: true, dist: 3.5, elDeg: 19, fov: 42, focus: 0.85 });
     this.ui.setPanelEnabled(false);
-    this.ui.showHint('Explore the globe \u00b7 find Cox\u2019s Bazar', 6.5);
+    this.ui.showHint(`Explore the globe \u00b7 find ${this.currentRegion.name}`, 6.5);
   }
 
   updateHotspot(delta) {
@@ -427,6 +479,7 @@ class App {
 
     this.controls.update(delta);
     this.director.apply(delta);
+    this.audio.update();
     this.atlas.sync([this.director.atlasA, this.director.atlasB]);
     this.atlas.update();
     this.cloudPass.update(delta, this.director.cloudPass);

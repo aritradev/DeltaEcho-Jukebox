@@ -96,6 +96,17 @@ export class CameraDirector {
     this.regionElTilt = el;
   }
 
+  // Retargets the flight without rebuilding the timeline. `main.js` updates the
+  // Earth's region direction first, then calls this before `beginFlight`.
+  setRegion(config) {
+    const dir = latLonToVector3(config.lat, config.lon, 1);
+    this.regionAz = Math.atan2(dir.x, dir.z);
+    this.regionEl = Math.asin(clamp(dir.y, -1, 1));
+    this.regionAzTilt = this.regionAz;
+    this.regionElTilt = this.regionEl;
+    this.refreshRegionTilt();
+  }
+
   solveSunFraming(earthBody) {
     const earth = this.earth;
     const dir = this._sunLocal;

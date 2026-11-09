@@ -53,7 +53,8 @@ state; the only server responsibility is delivering bytes with correct MIME type
 director needs a fully built world, and the director is what drives the intro.
 
 ```text
-new UI(handlers)                 wire DOM callbacks (select, back, skip)
+new SignalAudio()                Web Audio graph, built lazily on first gesture
+new UI(handlers)                 wire DOM callbacks (select, back, skip, audio, year)
 SpaceDive.start()                WebGL2 dive behind the loader text
 AssetLoader.loadAll()            await all textures, report progress
 buildRenderer()                  WebGLRenderer, ACES tone mapping, sRGB output
@@ -85,7 +86,8 @@ The app instance is exposed as `window.__jukebox` for debugging.
 | Module | Owns | Depends on |
 | --- | --- | --- |
 | `src/main.js` | App composition, UI↔scene wiring, mode machine, render loop, hotspot raycasting | everything below |
-| `src/config.js` | All tuning constants: render, sun, planets, Earth, clouds, atmosphere, region, states, timelines, categories | — |
+| `src/config.js` | All tuning constants: render, sun, planets, Earth, clouds, atmosphere, states, timelines, atlas | — |
+| `src/regions.js` | Generated destination index: coordinates, colours, availability, yearly signals | — |
 | `src/utils.js` | Math and DOM-canvas helpers, spherical conversions, seeded RNG | three |
 | `src/assets.js` | Texture manifest and loading, progress callbacks, derived roughness map | three, config |
 | `src/space-dive.js` | Loading-screen WebGL2 dive; starts before textures, disposed after the reveal | — |
@@ -93,25 +95,28 @@ The app instance is exposed as `window.__jukebox` for debugging.
 | `src/sun.js` | Procedural sun: baked noise, surface shader, glow, rays, flares | three, utils |
 | `src/solar-system.js` | Sun placement, planet orbits and spins, Saturn ring, orbit lines, corona | three, config, sun |
 | `src/earth.js` | Earth surface, night lights, clouds, atmosphere/haze shaders, framing helpers | three, config, utils |
-| `src/region.js` | Region footprint, beam, particles, reticle, hotspot hit target | three, config, utils |
-| `src/atlas.js` | Flat map stage: camera-attached plates, per-frame window math | three, config, utils |
+| `src/region.js` | Region footprint, beam, particles, reticle, hotspot hit target, retargeting | three, config, utils |
+| `src/atlas.js` | Flat map stage: camera-attached plates, per-frame window math, placeholder plates | three, config, utils |
 | `src/cloud-pass.js` | Camera-space cloud billboards and backdrops for the globe→map handoff; procedural textures | three, utils |
-| `src/camera-director.js` | Camera rig, keyframes, transitions, derived scene parameters | three, gsap, config, utils |
+| `src/camera-director.js` | Camera rig, keyframes, transitions, region retargeting, derived scene parameters | three, gsap, config, utils |
 | `src/controls.js` | Drag/scroll/pinch input mapped to the rig, intent signaling | three, config |
-| `src/ui.js` | All DOM reads/writes and overlay animation | gsap, config |
+| `src/signal-audio.js` | Web Audio graph for the ten signals: continuous layers, plucks, arpeggio, percussion | regions |
+| `src/ui.js` | All DOM reads/writes, place explorer, signal panel, year/compare state | gsap, regions |
 
 ### Direction of dependencies
 
 ```text
 main.js  ──>  ui.js, controls.js, camera-director.js, atlas.js, cloud-pass.js,
-              region.js, earth.js, solar-system.js, starfield.js, assets.js,
-              config.js
+              region.js, regions.js, earth.js, solar-system.js, starfield.js,
+              assets.js, signal-audio.js, config.js
 
 camera-director.js ──> earth.js (queries), region.js (queries), config.js
 atlas.js ──> config.js, utils.js
 cloud-pass.js ──> utils.js
 earth.js / region.js / solar-system.js ──> config.js, utils.js
-config.js ──> (nothing)
+signal-audio.js ──> regions.js
+ui.js ──> regions.js
+config.js / regions.js ──> (nothing)
 ```
 
 Rendering modules do not import `main.js` and do not touch the DOM. `ui.js` owns
@@ -192,6 +197,7 @@ sunLight.position.copy(solar.sunPosition)
 
 controls.update(delta)                  user input -> rig
 director.apply(delta)                   rig -> camera position/quaternion
+audio.update()                          schedule rhythmic layers against the audio clock
 atlas.sync([atlasA, atlasB])            hand the map state to the renderer module
 atlas.update()                          state -> texture offset/repeat, visibility
 cloudPass.update(delta, director.cloudPass)  billboard cloud intensity
@@ -265,9 +271,9 @@ phi   = (90 - lat) * DEG     // polar angle from +Y
 theta = (lon + 180) * DEG    // azimuth around Y
 ```
 
-The Bay of Bengal / Cox's Bazar region is `lat 21.43`, `lon 91.97`. `config.js` also
-defines the cap angle, shell scale, beam dimensions, and particle budget for its
-marker.
+The default Cox's Bazar region is `lat 21.43`, `lon 91.97`. The six destinations and
+their coordinates live in `src/regions.js`. `config.js` defines the cap angle, shell
+scale, beam dimensions, and particle budget shared by the marker for every region.
 
 Because Earth is tilted (`EARTH.axisTiltDeg`), framing code often needs
 *tilt-aware* queries (`getRegionAzElTilt`, `getLocalSunDirectionTilt`) instead of
@@ -278,7 +284,10 @@ the untilted ones. Use the tilt-aware variants whenever computing camera azimuth
 ## 9. Region marker
 
 `RegionMarker` builds five pieces: footprint cap, vertical beam, particle stream,
-reticle, and an invisible hit target used for raycasting.
+reticle, and an invisible hit target used for raycasting. All six destinations share
+the same geometry; `setRegion()` moves the existing root to new coordinates rather
+than rebuilding it. `main.applyRegion()` also calls `director.setRegion()` and swaps
+the atlas plate before the flight begins.
 
 Visibility is not a boolean. `main.js` computes it per frame from three factors:
 
@@ -297,10 +306,17 @@ space — never by absolute CSS coordinates.
 
 ## 10. UI layer
 
-`src/ui.js` is the only DOM owner. It caches elements in the constructor, builds
-the category buttons from `CATEGORIES`, and exposes intention-revealing methods
-(`setProgress`, `showDestination`, `hidePanel`, `setVeil`, `setAnchor`, …) rather
-than letting callers poke at nodes.
+`src/ui.js` is the only DOM owner. It caches elements in the constructor, builds the
+place explorer from `REGIONS` and the signal rows from `SIGNALS`, and exposes
+intention-revealing methods (`setProgress`, `showDestination`, `showSignals`,
+`setYear`, `hidePanel`, `setVeil`, `setAnchor`, …) rather than letting callers poke
+at nodes.
+
+The panel has two views. `#places-view` is the Geographic Explorer: search, country
+groups, and destination rows. `#signals-view` is the destination view: ten layer
+toggles, live yearly values, and the year/compare bar. `setYear()` is the single
+entry point for both the slider and the compare timer; it updates the panel and
+notifies `main.js`, which forwards the year to `SignalAudio`.
 
 Overlay elements in `index.html`, back to front:
 
@@ -310,10 +326,10 @@ Overlay elements in `index.html`, back to front:
 #vignette, #grain     film treatment
 #masthead         brand
 #readout          state + target telemetry
-#panel            category picker / "Explore a place"
+#panel            place explorer / destination signal explorer
 #selection-note   immediate feedback after a choice
 #anchor           projected hotspot label
-#destination      region card (Listen disabled in Phase 2 alpha)
+#destination      legacy region card, hidden in the current flow
 #backbar          return control
 #hint             transient messages
 #loader           progress + space-dive reveal
@@ -332,6 +348,10 @@ atlas maps. The backdrop group is `smoke.png`, the cloud sprite the nebula sky i
 painted from. The atlas group is derived from `ATLAS.levels` in `config.js`, so
 adding a map level there is enough to get it loaded. Progress is reported as a ratio
 and mapped by the App onto the loader bar.
+
+`assets/data/bd_6_regions_1985_2026_champion_jukebox.json` is not loaded at runtime.
+`tools/build-regions.mjs` reads it once and writes `src/regions.js`, which the browser
+imports directly. The generated file carries only the fields the UI and audio need.
 
 `src/cloud-pass.js` does not add loader entries: its puff and cloud-field textures
 are generated procedurally at startup from seeded value noise.
@@ -373,19 +393,25 @@ Where to make common changes:
 | Reframe a map level | `src/config.js` (`ATLAS.levels.<key>.start/end`) |
 | Add a map level | `ATLAS.levels` entry + image in `assets/textures/`; `assets.js` loads it automatically |
 | Add a planet | `PLANETS` entry + texture in `assets/textures/` + `BODY_MAPS` in `assets.js` |
-| Add a region | `REGION` config plus a per-region lookup; the marker currently assumes one |
+| Add a destination | Add it to the dataset and `META` in `tools/build-regions.mjs`, then regenerate `src/regions.js` |
+| Change a signal mapping | `SIGNALS` in `tools/build-regions.mjs`, then regenerate; tune the voice in `signal-audio.js` |
 | Adjust UI copy or layout | `index.html` for structure, `styles.css` for appearance, `ui.js` for behaviour |
 | Change transition behaviour | `camera-director.js` timelines |
-| Add audio or data | New module, wired from `main.js`; keep `ui.js` DOM-only |
+| Add a data source | A loader/generator that writes a module, wired from `main.js`; keep `ui.js` DOM-only |
 
 ---
 
 ## 14. Known limitations
 
-- One hard-coded region; no data model for multiple regions.
+- Six destinations share one marker, one camera framing, and one atlas window. The
+  data model supports more, but framing is not yet per-region.
+- Only Cox's Bazar has satellite artwork; other destinations get generated colour
+  plates from `makeRegionPlate()`.
 - The flat map has two fixed plates with hand-tuned windows; there is no
-  georeferencing, tiling, or intermediate scale, so the beach hand-off is a
+  georeferencing, tiling, or intermediate scale, so the place hand-off is a
   cross-fade rather than a continuous zoom.
+- Audio is fully synthesized. It does not stream recordings, and there is no
+  analyser or export path.
 - No persistence, no URL state, no deep links.
 - No automated tests, linter, or CI.
 - No error boundary beyond the startup `catch` that rewrites the loader subtitle.

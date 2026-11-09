@@ -10,9 +10,10 @@ prototype** and separates two things that must not be confused:
   baseline recorded for regression comparison, not permanent requirements.
 
 Phase 2 alpha is an early, unfinished prototype. The journey now continues past the
-region into a flat map stage, and the single-region experience and its targeting
-strategy remain temporary limitations: the region experience is expected to work
-across many regions and future experiences. See §13.
+region into a flat map stage and serves six Bangladesh destinations. Region
+retargeting is implemented (`CameraDirector.setRegion()`), but the destinations still
+share one marker, one framing, and one atlas window. Per-region framing and
+georeferencing remain future work. See §13.
 
 > **Phase 2 alpha addition.** After cloud entry the camera hands over to a flat
 > map: two camera-attached planes in `src/atlas.js` whose texture windows animate
@@ -30,6 +31,7 @@ Scope: `src/camera-director.js`, the camera-related parts of `src/main.js`,
 > document is stale — see §11.
 >
 > **Skip control.** Added after the baseline commit; §5.7 records its current values.
+> `Escape` invokes the same path during an outbound flight.
 >
 > **Transition speed.** A global `TIMELINE.speed` (currently `2`) was added after the
 > baseline; §5 lists the resulting runtime timings.
@@ -53,7 +55,8 @@ Protected surface, in full:
 2. Interruption recovery: `MODE`, panel, hotspot, hint (§7).
 3. Timeline and lock cleanup (§6, §7).
 4. Cancellation of stale completion callbacks (§7).
-5. Escape and Back remaining inert during `FLYING` (§7).
+5. Back remaining inert during `FLYING`, and Escape only invoking the explicit
+   Skip path during outbound flights (§7).
 
 Baseline, **not** protected:
 
@@ -537,8 +540,10 @@ user's current viewpoint. In the current prototype this is achieved by
 `restoreSolarState()` touching scene parameters only.
 
 **MUST NOT** — Break Escape or Back semantics during `FLYING`:
-- `Escape` acts only in `MODE.ATLAS` and `MODE.EXPLORE`; during `FLYING` it does
-  nothing.
+- In `MODE.ATLAS` and `MODE.EXPLORE`, `Escape` runs `onBack()`.
+- During an outbound `FLYING` transition, `Escape` runs `onSkip()` — the same
+  timeline-killing path as the Skip control — but only while that control is
+  visible. During the Back transition the control is hidden, so `Escape` is inert.
 - The back button handler returns immediately when `MODE === FLYING`.
 
 **MUST** — Keep the flat map inert. `MODE.ATLAS` means a plate is on screen and drag,
@@ -547,10 +552,10 @@ after the plates have faded out, never while one is still visible. This is an
 intentional input carve-out for the map stage, not an interruption guarantee: it
 narrows when the user can interrupt, and must not be used to bypass §7.3–§7.4.
 
-**MUST** — Keep these guarantees when region targeting changes. The current
-single-region precomputed azimuth (Q4) is a prototype limitation, not part of the
-guarantee. A multi-region implementation must still satisfy §7.3–§7.4 while Earth is
-rotating and while more than one region can be addressed. See §13.
+**MUST** — Keep these guarantees when region targeting changes. `main.applyRegion()`
+updates the marker, calls `CameraDirector.setRegion()`, and only then starts the
+flight. The captured target is still a prototype detail, not part of the guarantee;
+any retargeting path must satisfy §7.3–§7.4 while Earth is rotating. See §13.
 
 ### 7.5 Path-specific behaviour
 
@@ -564,7 +569,8 @@ rotating and while more than one region can be addressed. See §13.
 | Drag/wheel during `CONTINENT` → `LOCALITY` | No effect: controls are disabled on the `CONTINENT` state change | Verified |
 | Skip during any flight | Timeline killed; 0.35 s veil cut; map reveal and destination card | Verified |
 | Escape during `ATLAS` | Runs `onBack()` and leaves the map | Verified |
-| `Escape` during `FLYING` | No effect | Verified |
+| `Escape` during an outbound `FLYING` transition | Runs `onSkip()`; reaches the destination like the Skip control | Verified |
+| `Escape` during the Back transition | No effect: the Skip control is hidden | Verified |
 | Back during `FLYING` | No effect | Verified |
 | Interrupt within 0.85 s of selection | Suspected: stale `hidePanel` timer hides the restored panel (Q2) | Runtime-pending |
 | Interrupt during return with `dist < 6` | Suspected: `hotspotArmed = true` while `regionVisibility → 0` leaves an invisible-but-hittable hotspot (Q8) | Runtime-pending |
@@ -573,7 +579,7 @@ rotating and while more than one region can be addressed. See §13.
 
 - The exact choreography, durations, and target values in §5.
 - The exact recovered `focus`/`offX`/`offY` values (they persist; Q5).
-- The single-region targeting strategy and its precomputed azimuth (Q4).
+- The per-region target values and the precomputed azimuth captured at click time (Q4).
 - The single-scalar `regionVisibility` model.
 - Panel timing races (Q2).
 - Any behaviour reachable only by interrupting within the first 0.85 s.
@@ -679,7 +685,7 @@ Reload the page between destructive tests to return to the baseline.
 | I4 | Wheel during cloud entry (~10.5 s) | Mode `EXPLORE`; veil and cloud pass fade out; region marker fades |
 | I5 | Drag/wheel after `06 · continent` appears (~12.5 s) | No effect at all — controls are disabled; the flight continues to the map |
 | I6 | Wheel ~3 s into the Back transition | Manual control restored; panel returns; readout is not `01`; no stuck state |
-| I7 | Press Escape during any flight | Nothing happens |
+| I7 | Press Escape during an outbound flight | Skips to the destination, exactly like the Skip control; pressing it during the Back transition still does nothing |
 | I8 | Click Back during any flight | Nothing happens |
 | I9 | Press Escape on the finished map | Leaves the map and returns to the solar system |
 | I10 | After any interruption, inspect `__jukebox.director` | `isFlying === false`, `locked === false`, `rig.dist` unchanged by recovery |
@@ -705,8 +711,8 @@ baseline choreography:
 2. I2, I3, I4, I5, I6, I7, I8, I9, I10 pass.
 3. The destination card appears only after successful completion, never after an
    interruption.
-4. The Skip control is hidden outside `FLYING`, and skipping reaches `08 · locality`
-   with the destination card shown.
+4. The Skip control is hidden outside `FLYING`, and skipping (button or Escape)
+   reaches `08 · locality` with the destination card shown.
 5. `git diff` shows no change outside the intended files.
 
 ---
@@ -790,7 +796,7 @@ intended-but-absent behaviour.
 
 | Item | Value |
 | --- | --- |
-| Applies to | Phase 2 alpha prototype, single region, at the baseline commit |
+| Applies to | Phase 2 alpha prototype, six destinations, at the baseline commit |
 | Baseline commit | Phase 2 alpha (`feat: add a flat continent map stage after cloud entry`) |
 | Previous baseline | `8ab5577` (Phase 1) |
 | Files verified | `src/camera-director.js`, `src/atlas.js`, `src/main.js`, `src/controls.js`, `src/earth.js`, `src/ui.js`, `src/config.js`, `styles.css` |
@@ -802,12 +808,13 @@ intended-but-absent behaviour.
 ## 13. Prototype scope and future extensibility
 
 Phase 2 alpha is not final or fully polished. The camera system currently serves
-**one** region, and several choices reflect that. Recording them as baseline does not
-make them permanent.
+**six** destinations, but they share one framing model, and several choices reflect
+that. Recording them as baseline does not make them permanent.
 
 | Current choice | Status | Why it is expected to change |
 | --- | --- | --- |
-| One region with fixed `regionAzTilt` / `regionElTilt` | Temporary | Multi-region support needs per-region targets |
+| Shared marker and framing for all six destinations | Temporary | Per-region framing and imagery are future work |
+| `setRegion()` updates `regionAzTilt` / `regionElTilt` before each flight | Implemented | Keeps the existing timeline while allowing multiple targets |
 | Region target sampled once at click (`buildRegionSequence`) | Temporary | Targets must stay correct while Earth rotates (Q4) |
 | Fixed `focus` / `offX` / `offY` framing values | Temporary | Framing must adapt per region and per aspect |
 | `regionVisibility` as one scalar | Temporary | Several regions may be visible or fading together |
@@ -821,7 +828,8 @@ What must survive multi-region work:
 - §7.3–§7.4 interruption recovery, unchanged in substance.
 - Timeline cancellation and stale-callback cancellation (§6.5, §7.4).
 - `locked` restoration, and the guarantee that `MODE` never sticks in `FLYING`.
-- Escape and Back staying inert during `FLYING`.
+- Back staying inert during `FLYING`, and Escape only ever invoking the explicit
+  Skip path during outbound flights.
 - No completion callback firing after an interruption.
 - The flat map staying inert while visible, and leaving only through a path that
   re-enables controls when the plate is gone.

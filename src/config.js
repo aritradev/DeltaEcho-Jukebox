@@ -168,10 +168,4 @@ export const TIMELINE = {
   locality: 2.8
 };
 
-export const CATEGORIES = [
-  { key: 'ocean', label: 'Ocean', glyph: '\u{1F30A}' },
-  { key: 'atmosphere', label: 'Atmosphere', glyph: '\u{1F327}' },
-  { key: 'land', label: 'Land', glyph: '\u{1F331}' }
-];
-
 export const TEXTURE_DIR = './assets/textures/';
