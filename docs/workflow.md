@@ -120,7 +120,8 @@ Minimum bar for any visible change:
 4. Camera transitions, and especially mid-flight interruption, match the manual
    matrix in [`camera-transitions.md`](camera-transitions.md) §9. There is no
    automation for this; perform the checks and report which ones you ran.
-5. Back / Escape returns to the solar system.
+5. Back / Escape returns to the view the flight started from — the Earth orbit if it
+   started there, otherwise the solar system.
 6. Window resize keeps overlays aligned.
 
 If your change is documentation-only, verify links resolve and statements match

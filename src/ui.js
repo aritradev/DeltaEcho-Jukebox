@@ -61,6 +61,7 @@ export class UI {
       destination: document.getElementById('destination'),
       backbar: document.getElementById('backbar'),
       backBtn: document.getElementById('back-btn'),
+      backLabel: document.getElementById('back-label'),
       skipBtn: document.getElementById('skip-btn'),
       hint: document.getElementById('hint'),
       veil: document.getElementById('veil'),
@@ -575,6 +576,10 @@ export class UI {
       row.disabled = !enabled || Boolean(unavailable);
     });
     this.renderSignals();
+  }
+
+  setBackLabel(target) {
+    this.el.backLabel.textContent = `Back to ${target}`;
   }
 
   showDestination(region) {

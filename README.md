@@ -133,15 +133,17 @@ The last three stages are a flat-map stage, not a camera move: `src/atlas.js` dr
 two camera-attached plates and animates only their texture windows, so the camera
 keeps a single writer. The globe→map swap is hidden by `src/cloud-pass.js`, a
 camera-space cloud field that is faded out over the map. Drag and scroll are inert
-once the map appears; Back and Escape return to the solar system, while Escape during
-an outbound flight skips ahead. Cox's Bazar uses
+once the map appears; Back and Escape return to the view the flight started from —
+the Earth orbit if you launched from there, otherwise the solar system — while
+Escape during an outbound flight skips ahead. Cox's Bazar uses
 the real satellite plate; the other five destinations use a generated colour plate
 until per-region imagery exists.
 
 User input (drag/scroll) hands control to `ExplorerControls` while the globe is on
-screen. Returning via the on-screen back button replays the reverse framing, and the
-cloud pass fades in as the map dissolves so the climb back out passes through the
-same cloud layer.
+screen. The place explorer stays usable in free orbit, and a destination chosen there
+returns to that orbit framing (same azimuth) with the panel re-enabled. Returning via
+the on-screen back button replays the reverse framing, and the cloud pass fades in as
+the map dissolves so the climb back out passes through the same cloud layer.
 
 ### Configuration
 

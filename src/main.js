@@ -29,6 +29,9 @@ class App {
     this.clock = new THREE.Clock();
     this.elapsed = 0;
     this.mode = MODE.SOLAR;
+    // Where Back should return after a destination: the wide solar view or the
+    // zoomed Earth orbit the flight started from.
+    this.returnMode = MODE.SOLAR;
     this.started = false;
     this.skipping = false;
     this.hoveringHotspot = false;
@@ -234,6 +237,7 @@ class App {
 
   onSelect(region) {
     if (!this.started || this.mode === MODE.FLYING || !region) return;
+    this.returnMode = this.mode === MODE.EXPLORE ? MODE.EXPLORE : MODE.SOLAR;
     this.prepareAudio();
     this.applyRegion(region);
     this.ui.showSelectionNote(region);
@@ -255,6 +259,7 @@ class App {
     this.ui.setAnchor(0, 0, false);
     this.ui.hideSelectionNote();
     this.ui.hideSkip();
+    this.ui.setBackLabel(this.returnMode === MODE.EXPLORE ? 'Earth orbit' : 'solar system');
     this.ui.showDestination(this.currentRegion);
     this.controls.setEnabled(false);
     this.startDestinationAudio();
@@ -263,28 +268,34 @@ class App {
 
   onBack() {
     if (this.mode === MODE.FLYING) return;
+    const returnToOrbit = this.mode === MODE.ATLAS && this.returnMode === MODE.EXPLORE;
     this.mode = MODE.FLYING;
     this.hotspotArmed = false;
     this.region.setHover(0);
     this.audio.fadeOut(0.8);
     window.setTimeout(() => {
-      if (this.mode === MODE.SOLAR) this.audio.suspend();
+      if (this.mode === MODE.SOLAR || this.mode === MODE.EXPLORE) this.audio.suspend();
     }, 1200);
     this.ui.hideDestination(0.8);
     this.ui.hideSelectionNote();
     this.ui.setPanelEnabled(false);
     this.ui.setAnchor(0, 0, false);
-    this.director.exitAtlas(() => {
-      this.mode = MODE.SOLAR;
+
+    const settle = () => {
+      this.mode = returnToOrbit ? MODE.EXPLORE : MODE.SOLAR;
       this.skipping = false;
+      this.hotspotArmed = returnToOrbit;
       this.controls.setEnabled(true);
       this.ui.showPlaces();
       this.ui.setActiveRegion(this.currentRegion);
       this.ui.showPanel(1.4);
       this.ui.setPanelEnabled(true);
-      this.ui.showHint('Observatory view', 3.5);
+      this.ui.showHint(returnToOrbit ? 'Earth orbit \u00b7 choose a place' : 'Observatory view', 3.5);
       this.audio.suspend();
-    });
+    };
+
+    if (returnToOrbit) this.director.exitAtlasToOrbit(settle);
+    else this.director.exitAtlas(settle);
   }
 
   onSkip() {
@@ -380,6 +391,7 @@ class App {
     if (this.mode === MODE.ATLAS) {
       return;
     }
+    this.returnMode = MODE.EXPLORE;
     this.prepareAudio();
     this.mode = MODE.FLYING;
     this.ui.setPanelEnabled(false);
@@ -390,6 +402,7 @@ class App {
       this.mode = MODE.ATLAS;
       this.hotspotArmed = false;
       this.ui.hideSkip();
+      this.ui.setBackLabel('Earth orbit');
       this.ui.showDestination(this.currentRegion);
       this.controls.setEnabled(false);
       this.startDestinationAudio();
@@ -399,9 +412,20 @@ class App {
 
   enterExplore() {
     this.mode = MODE.EXPLORE;
-    this.hotspotArmed = true;
-    this.director.enterFreeOrbit({ keepAz: true, dist: 3.5, elDeg: 19, fov: 42, focus: 0.85 });
+    this.hotspotArmed = false;
     this.ui.setPanelEnabled(false);
+    this.director.enterFreeOrbit({
+      keepAz: true,
+      dist: 3.5,
+      elDeg: 19,
+      fov: 42,
+      focus: 0.85,
+      onComplete: () => {
+        if (this.mode !== MODE.EXPLORE) return;
+        this.hotspotArmed = true;
+        this.ui.setPanelEnabled(true);
+      }
+    });
     this.ui.showHint(`Explore the globe \u00b7 find ${this.currentRegion.name}`, 6.5);
   }
 

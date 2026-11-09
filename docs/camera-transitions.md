@@ -30,8 +30,11 @@ Scope: `src/camera-director.js`, the camera-related parts of `src/main.js`,
 > `8ab5577`. If the code and this document disagree, the code is correct and this
 > document is stale — see §11.
 >
-> **Skip control.** Added after the baseline commit; §5.7 records its current values.
+> **Skip control.** Added after the baseline commit; §5.8 records its current values.
 > `Escape` invokes the same path during an outbound flight.
+>
+> **Orbit return.** Back/Escape from a destination that was chosen in Earth orbit
+> returns to the orbit framing instead of the wide view; §5.4 records it.
 >
 > **Transition speed.** A global `TIMELINE.speed` (currently `2`) was added after the
 > baseline; §5 lists the resulting runtime timings.
@@ -259,6 +262,7 @@ flag, so this path is simply the tail of the full flight with no timing differen
 ### 5.3 `returnToSolarSystem` — Back button
 
 Reached either directly, or through `exitAtlas()` when a map plate is on screen.
+This is the Back path when the destination was chosen from the wide solar view.
 
 `exitAtlas()` first fades both atlas plates out over 0.25 s while raising the veil to
 1 and ramping `cloudPass` to 1, then resets `atlasA`/`atlasB` to their start values
@@ -267,6 +271,11 @@ up as the map dissolves, so the return reads as climbing back out through the sa
 cloud field used on the way in. When no plate is visible it forwards straight to
 `returnToSolarSystem()`, so callers do not need to know the current mode. Back from
 the map therefore takes 0.25 + 5.55 = **5.8 s**; from anywhere else, 5.55 s.
+
+The plate fade is shared with the orbit return via `_fadeAtlasOut()` (§5.4), so both
+exits hand the map over to the globe identically. `_fadeAtlasOut()` also pins
+`veil = 1` and `cloudPass = 1` on completion, so the following return starts from a
+known cloud-covered state.
 
 | At | State | Changes |
 | --- | --- | --- |
@@ -283,7 +292,34 @@ the map therefore takes 0.25 + 5.55 = **5.8 s**; from anywhere else, 5.55 s.
 **Verified** — This is a reverse *framing*, not a reversed timeline: stages are
 authored forward at absolute positions.
 
-### 5.4 `enterFreeOrbit` — click Earth from the wide view
+### 5.4 `returnToOrbit` — Back button from an orbit-started flight
+
+Reached through `exitAtlasToOrbit()`, which fades the plates with the same
+`_fadeAtlasOut()` hand-off as `exitAtlas()` (0.25 s) and then calls
+`returnToOrbit(onComplete, true)`. When no plate is visible it forwards straight to
+`returnToOrbit(onComplete, false)`, which uses a shorter 0.4 s cloud fade. This is
+the Back path when the destination was chosen while already in the zoomed Earth
+orbit (`MODE.EXPLORE`).
+
+The return is a shorter climb than `returnToSolarSystem`: it stops at the free-orbit
+framing, keeps the selected region's azimuth (`rig.az` is untouched), and re-arms
+the hotspot so the place explorer stays usable.
+
+| At | State | Changes |
+| --- | --- | --- |
+| 0 | `06 continent` | `atlasA`/`atlasB` `opacity → 0` (0.45 s), `veil → 0` (0.6 s), `cloudPass → 0` (1.7 s `power1.inOut` when through clouds, 0.4 s otherwise), `cloudOpacity → 0.66` (1.1 s), `regionVisibility → 0.85` (1.1 s), `spinScale → 0.55` (1 s), `orbitLineFade → 1` (1 s), `coronaScale → 0.85` (1 s) |
+| 0 | — | Rig tween (1.7 s, `power2.inOut`): `dist → 3.5`, `el → 19°`, `fov → 42`, `focus → 0.85`, `offX → 0`, `offY → 0.023`; `az` is left at the selected region's azimuth |
+| 1.3 | `03 earth orbit` | Readout switches partway through the climb |
+| 1.7 | complete | `timeline = null`, `locked = false`, `setState(EARTH_ORBIT)`, callback |
+
+**Total: 1.95 s** from the map (0.25 s plate fade + 1.7 s climb), or **1.7 s** when
+no plate is visible. `main.onBack()` then restores `MODE.EXPLORE`, re-enables the
+panel, selects the current region, and re-arms the hotspot.
+
+**Verified** — Orbit return framing matches `enterFreeOrbit`'s target, and the wide
+return is unchanged (§9.3).
+
+### 5.5 `enterFreeOrbit` — click Earth from the wide view
 
 Not a timeline. One `gsap.to` on the rig plus one on the director.
 
@@ -304,7 +340,7 @@ timeline, so `isFlying === false` and `interrupt()` returns `false`. A future de
 may choose to make it interruptible; that is an experience decision, not a
 reliability regression. See Q3 and Q10.
 
-### 5.5 `introDolly` — entering the observatory
+### 5.6 `introDolly` — entering the observatory
 
 Called once by `main.onEnter()` with `duration = 5.2` base, scaled to 2.6 s.
 
@@ -319,7 +355,7 @@ Ease `power2.out`. `az`, `el`, and `focus` are untouched.
 **Verified** — This is a tween, not a timeline. `isFlying === false`, `locked` stays
 `false`, and `interrupt()` cannot cancel it.
 
-### 5.6 `restoreSolarState` — interrupt cleanup
+### 5.7 `restoreSolarState` — interrupt cleanup
 
 Default duration 0.45 s (`scaled(0.9)`), called bare by `interrupt()`.
 
@@ -343,7 +379,7 @@ state where the cloud pass is already gone.
 user's grabbed viewpoint is preserved. In the current prototype this is achieved by
 `restoreSolarState()` touching scene parameters only. See Q5 for the consequence.
 
-### 5.7 `skipToRegion` — skip control
+### 5.8 `skipToRegion` — skip control
 
 The Skip control is shown only while `MODE === FLYING`: it appears when a category,
 the place, or the region hotspot is chosen, and hides again on arrival, Back, or
@@ -364,7 +400,7 @@ sequence instead of playing it.
 This is a tween, not a timeline, so `interrupt()` does not apply during the 0.35 s
 cut; controls are disabled for that window.
 
-### 5.8 Totals
+### 5.9 Totals
 
 | Path | Duration |
 | --- | --- |
@@ -372,6 +408,8 @@ cut; controls are disabled for that window.
 | `continueToRegion` | 10.35 s |
 | `returnToSolarSystem` | 5.55 s |
 | Back via `exitAtlas` (plate visible) | 5.8 s |
+| `returnToOrbit` | 1.7 s |
+| Back via `exitAtlasToOrbit` (plate visible) | 1.95 s |
 | `enterFreeOrbit` | 1.7 s |
 | `introDolly` | 2.6 s |
 | `restoreSolarState` | 0.45 s |
@@ -424,6 +462,7 @@ that follow it are protected.
 | --- | --- |
 | `beginFlight`, `continueToRegion` | `timeline = null` → `locked = false` → clear `pendingComplete` → invoke callback |
 | `returnToSolarSystem` | `timeline = null` → `locked = false` → `setState(SOLAR_SYSTEM)` → invoke callback |
+| `returnToOrbit` | `timeline = null` → `locked = false` → `setState(EARTH_ORBIT)` → invoke callback |
 
 **MUST** — `locked` is cleared before the completion callback runs, so the callback
 observes an unlocked director.
@@ -431,9 +470,10 @@ observes an unlocked director.
 **MUST NOT** — Invoke a completion callback after the timeline has been killed, or
 after an interruption has taken ownership of recovery.
 
-`exitAtlas()` is not a timeline of its own: it fades the plates over 0.5 s and then
-delegates to `returnToSolarSystem()`, so the ordering above applies to the delegated
-return. The 0.5 s fade is the only window in which a scripted transition is running
+`exitAtlas()` and `exitAtlasToOrbit()` are not timelines of their own: they fade the
+plates over 0.25 s via `_fadeAtlasOut()` and then delegate to `returnToSolarSystem()`
+or `returnToOrbit()` respectively, so the ordering above applies to the delegated
+return. The 0.25 s fade is the only window in which a scripted transition is running
 with `locked === false`; `MODE` is already `FLYING` and controls are already
 disabled, so no input can reach a tween.
 
@@ -444,7 +484,8 @@ disabled, so no input can reach a tween.
 | `beginFlight` | `true` |
 | `continueToRegion` | `true` |
 | `returnToSolarSystem` | `true` |
-| `exitAtlas` | unchanged (delegates to `returnToSolarSystem`) |
+| `returnToOrbit` | `true` |
+| `exitAtlas` / `exitAtlasToOrbit` | unchanged (delegate to the matching return) |
 | `enterFreeOrbit` | `false` |
 | `skipToRegion` | `false` |
 | timeline `onComplete` | `false` |
@@ -510,7 +551,7 @@ In this order:
 1. `killTimeline()` runs: timeline killed, `timeline = null`,
    `pendingComplete = null`, rig/director tweens killed.
 2. `locked = false`.
-3. `restoreSolarState()` starts a 0.45 s tween of scene parameters only (§5.6).
+3. `restoreSolarState()` starts a 0.45 s tween of scene parameters only (§5.7).
 4. `near = director.rig.dist < 6` (strict).
 5. `MODE = EXPLORE` if `near`, otherwise `SOLAR`.
 6. `ui.hideSelectionNote()`.
@@ -568,7 +609,9 @@ any retargeting path must satisfy §7.3–§7.4 while Earth is rotating. See §1
 | Interrupt during `returnToSolarSystem` | `interrupt()` succeeds; the return timeline's own callback never runs, so panel restoration comes from `onUserIntent` | Verified |
 | Drag/wheel during `CONTINENT` → `LOCALITY` | No effect: controls are disabled on the `CONTINENT` state change | Verified |
 | Skip during any flight | Timeline killed; 0.35 s veil cut; map reveal and destination card | Verified |
-| Escape during `ATLAS` | Runs `onBack()` and leaves the map | Verified |
+| Escape/Back during `ATLAS` (flight started from the wide view) | `returnMode` is `SOLAR`; `exitAtlas()` restores the wide view | Verified |
+| Escape/Back during `ATLAS` (flight started from Earth orbit) | `returnMode` is `EXPLORE`; `exitAtlasToOrbit()` restores the orbit framing, re-enables the panel, and re-arms the hotspot | Verified |
+| Selecting a place from `EXPLORE` | Flight starts from orbit and Back later returns to orbit | Verified |
 | `Escape` during an outbound `FLYING` transition | Runs `onSkip()`; reaches the destination like the Skip control | Verified |
 | `Escape` during the Back transition | No effect: the Skip control is hidden | Verified |
 | Back during `FLYING` | No effect | Verified |
@@ -670,6 +713,10 @@ the time the return starts and clears as the camera climbs, so the first ~2 s re
 as passing back up through the cloud layer. From elsewhere: `06` at 0, `02` at 1.3,
 `01` at 3.2, settled at 5.55.
 
+Back button from a destination that was chosen in Earth orbit: `06` at 0, `03` at
+1.3, settled at 1.95 (0.25 s plate fade + 1.7 s climb). The wide view is never
+visited, and the panel is re-enabled on arrival.
+
 Skip control: hidden until a category, the place, or the region hotspot starts a
 flight; it then reaches `08 · locality` in 0.35 s with the destination card shown.
 
@@ -687,9 +734,10 @@ Reload the page between destructive tests to return to the baseline.
 | I6 | Wheel ~3 s into the Back transition | Manual control restored; panel returns; readout is not `01`; no stuck state |
 | I7 | Press Escape during an outbound flight | Skips to the destination, exactly like the Skip control; pressing it during the Back transition still does nothing |
 | I8 | Click Back during any flight | Nothing happens |
-| I9 | Press Escape on the finished map | Leaves the map and returns to the solar system |
+| I9 | Press Escape on the finished map | Returns to the view the flight started from: the wide solar view for a wide-started flight, or the Earth-orbit framing (panel enabled, hotspot armed) for an orbit-started flight |
 | I10 | After any interruption, inspect `__jukebox.director` | `isFlying === false`, `locked === false`, `rig.dist` unchanged by recovery |
 | I11 | After I3/I4, click the hotspot | Flight continues to the map; destination card appears at the end |
+| I12 | From `EXPLORE`, select a place, then press Escape/Back on the map | Returns to the orbit framing (`dist 3.5`, `fov 42`, `focus 0.85`) with the same azimuth, panel enabled, and hotspot armed |
 
 Probe available in the console (exposed by `main.js`):
 
@@ -708,12 +756,16 @@ Minimum evidence required after any change to protected behaviour **or** to the
 baseline choreography:
 
 1. §9.1 checkpoints in order, with no readout skip or repeat.
-2. I2, I3, I4, I5, I6, I7, I8, I9, I10 pass.
+2. I2–I12 pass.
 3. The destination card appears only after successful completion, never after an
    interruption.
 4. The Skip control is hidden outside `FLYING`, and skipping (button or Escape)
    reaches `08 · locality` with the destination card shown.
-5. `git diff` shows no change outside the intended files.
+5. From `EXPLORE`, the place list is enabled and selecting a destination works.
+   Back/Escape from that destination returns to the orbit framing (`dist 3.5`,
+   `fov 42`, `focus 0.85`, same azimuth), re-enables the panel, and re-arms the
+   hotspot. A destination started from the wide view still returns wide.
+6. `git diff` shows no change outside the intended files.
 
 ---
 
@@ -758,7 +810,7 @@ Two tiers, because this document protects different things.
 
 ### 11.1 Reliability guarantees
 
-Any change to a **MUST** in §2, §3, §5.6, §6.3, §6.5, §7, or §8 is gated:
+Any change to a **MUST** in §2, §3, §5.7, §6.3, §6.5, §7, or §8 is gated:
 
 1. **Review and explicit decision** on the behavioural change, before editing.
 2. **Same-commit contract update** — this document must describe the new behaviour.

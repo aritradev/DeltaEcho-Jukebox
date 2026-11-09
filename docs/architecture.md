@@ -156,15 +156,19 @@ interactive.
 | Mode | Meaning | Click behaviour |
 | --- | --- | --- |
 | `SOLAR` | Wide observatory view, panel available | Clicking Earth begins `EXPLORE` |
-| `EXPLORE` | Free orbit around Earth | Hotspot click continues to the region |
+| `EXPLORE` | Free orbit around Earth; place panel stays usable | Hotspot click or place selection continues to the region |
 | `FLYING` | A scripted camera transition is running | Clicking is ignored |
-| `ATLAS` | Flat map is on screen, destination card shown | No drag or zoom; Back/Escape leaves |
+| `ATLAS` | Flat map is on screen, destination card shown | No drag or zoom; Back/Escape returns to the flight's origin (orbit or wide) |
 
 Rules that follow from this split:
 
 - Never start a scripted transition while `mode === FLYING`.
 - `onUserIntent()` may interrupt a flight; when it does, the mode becomes
   `EXPLORE` if the rig is close (`dist < 6`), otherwise `SOLAR`.
+- `returnMode` records whether the current flight started in `EXPLORE` or `SOLAR`.
+  `onBack()` uses it to choose `exitAtlasToOrbit()` or `exitAtlas()`, so a
+  destination chosen from Earth orbit returns to that orbit framing and re-enables
+  the panel; a destination chosen from the wide view returns wide.
 - Interruption recovery guarantees are specified in
   [`camera-transitions.md`](camera-transitions.md) §7.
 - `hotspotArmed` gates whether the region can be hovered or clicked.

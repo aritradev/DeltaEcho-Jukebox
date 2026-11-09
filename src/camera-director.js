@@ -413,6 +413,7 @@ export class CameraDirector {
       duration,
       ease: 'power2.inOut',
       onComplete: () => {
+        if (options.onComplete) options.onComplete();
         if (this.onComplete) this.onComplete();
       }
     });
@@ -483,13 +484,59 @@ export class CameraDirector {
     return tl;
   }
 
-  // Leaves the flat map and flies back out. When no map is up this is just the
-  // ordinary return, so callers do not need to know which mode they were in.
-  exitAtlas(onComplete) {
-    if (!this.atlasVisible) {
-      this.returnToSolarSystem(onComplete);
-      return null;
+  // Reverse framing from the flat map back to the free-orbit view: a shorter
+  // climb than returnToSolarSystem, keeping the selected region's azimuth so
+  // the camera pulls back over the place the viewer just heard.
+  returnToOrbit(onComplete, throughClouds = true) {
+    this.killTimeline();
+    this.locked = true;
+    const rig = this.rig;
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        this.timeline = null;
+        this.locked = false;
+        this.setState(STATES.EARTH_ORBIT);
+        if (onComplete) onComplete();
+      }
+    });
+
+    this.scheduleState(tl, STATES.CONTINENT, 0);
+    tl.to([this.atlasA, this.atlasB], { opacity: 0, duration: scaled(0.9), ease: 'power2.in' }, 0);
+    tl.to(this, { veil: 0, duration: scaled(1.2) }, 0);
+    if (throughClouds) {
+      tl.to(this, { cloudPass: 0, duration: scaled(3.4), ease: 'power1.inOut' }, 0);
+    } else {
+      tl.to(this, { cloudPass: 0, duration: scaled(0.8), ease: 'power2.out' }, 0);
     }
+    tl.to(this, { cloudOpacity: CLOUDS.opacity.freeOrbit, duration: scaled(2.2), ease: 'power1.inOut' }, 0);
+    tl.to(this, { regionVisibility: 0.85, duration: scaled(2.2), ease: 'power2.inOut' }, 0);
+    tl.to(this, { spinScale: 0.55, duration: scaled(2), ease: 'power2.out' }, 0);
+    tl.to(this, { orbitLineFade: 1, duration: scaled(2) }, 0);
+    tl.to(this, { coronaScale: 0.85, duration: scaled(2) }, 0);
+    tl.to(
+      rig,
+      {
+        dist: 3.5,
+        el: 19 * DEG,
+        fov: 42,
+        focus: 0.85,
+        offX: 0,
+        offY: 0.023,
+        duration: scaled(3.4),
+        ease: 'power2.inOut'
+      },
+      0
+    );
+
+    this.scheduleState(tl, STATES.EARTH_ORBIT, scaled(2.6));
+    this.timeline = tl;
+    return tl;
+  }
+
+  // Fades the plates out under the veil and restores their start windows. Both
+  // return paths share this hand-off so the map never pops off mid-fade.
+  _fadeAtlasOut(onComplete) {
     this.killTimeline();
     const duration = scaled(0.5);
     gsap.to(this, { veil: 1, duration, ease: 'power2.in' });
@@ -503,6 +550,8 @@ export class CameraDirector {
       onComplete: () => {
         this.atlasA.opacity = 0;
         this.atlasB.opacity = 0;
+        this.veil = 1;
+        this.cloudPass = 1;
         const asia = ATLAS.levels.asia.start;
         const coxs = ATLAS.levels.coxs.start;
         this.atlasA.u = asia.u;
@@ -511,10 +560,30 @@ export class CameraDirector {
         this.atlasB.u = coxs.u;
         this.atlasB.v = coxs.v;
         this.atlasB.zoom = coxs.zoom;
-        // Leaving the map: climb back out through the cloud pass.
-        this.returnToSolarSystem(onComplete, true);
+        onComplete();
       }
     });
+  }
+
+  // Leaves the flat map and flies back out to the wide solar view. When no map
+  // is up this is just the ordinary return, so callers do not need to know
+  // which mode they were in.
+  exitAtlas(onComplete) {
+    if (!this.atlasVisible) {
+      this.returnToSolarSystem(onComplete);
+      return null;
+    }
+    return this._fadeAtlasOut(() => this.returnToSolarSystem(onComplete, true));
+  }
+
+  // Leaves the flat map and climbs back to the free-orbit framing instead of
+  // the wide view. Used when the destination was chosen from Earth orbit.
+  exitAtlasToOrbit(onComplete) {
+    if (!this.atlasVisible) {
+      this.returnToOrbit(onComplete, false);
+      return null;
+    }
+    return this._fadeAtlasOut(() => this.returnToOrbit(onComplete, true));
   }
 
   killTimeline() {

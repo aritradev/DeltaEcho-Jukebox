@@ -124,9 +124,12 @@ No automated tests exist. Before calling a change done:
    audio, and Compare alternates 1985/2025.
 8. Dragging rotates, scrolling zooms, and interrupting a flight restores manual
    control (and stops audio). Escape during an outbound flight skips it.
-9. The back button (and Escape, once in the region) returns to the solar system
+9. The back button (and Escape, once in the region) returns to the view the flight
+   started from — the Earth orbit if it started there, otherwise the solar system —
    and suspends audio.
-10. Clicking Earth from the wide view enters free orbit.
+10. Clicking Earth from the wide view enters free orbit; the place explorer stays
+    usable, selecting a destination works, and Back returns to that orbit framing
+    with the panel enabled and the hotspot armed.
 11. Resizing the window keeps the scene and overlays aligned.
 12. `git status` shows only the files you intended to change.
 
