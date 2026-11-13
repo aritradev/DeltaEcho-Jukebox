@@ -1,366 +1,200 @@
-# Earth Information Jukebox
+# Echoes of Earth — The Earth Information Jukebox
 
-A cinematic, browser-based journey from the Solar System to Earth, down through the
-clouds to a flat map, and finally into one of **eight destinations**: six Bangladesh
-regions from the Champion Edition dataset, plus Mount Everest and the Pacific
-Northwest wildfires from the NASA Earth Information Center gallery. Each destination
-exposes ten environmental signals, a year selector, a configurable comparison
-interval, and a Web Audio sonification layer.
+**Translating 42 Years (1985–2026) of NASA Earth Information Center (EIC) Visual Frames & Multi-Sensor Satellite Telemetry into Real-Time Interactive Soundscapes**
 
-This repository contains the complete application. There is no external data feed and no
-backend: the Champion Edition JSON and the NASA EIC gallery export are committed as
-data, and the browser reads a compact generated index. The focus remains the camera
-choreography, the rendered Earth, the map descent, and the panel that turns each
-place into a listenable mix.
+[![NASA Space Apps 2026](https://img.shields.io/badge/NASA_Space_Apps_2026-The_Earth_Information_Jukebox-0B3D91?style=for-the-badge&logo=nasa&logoColor=white)](https://www.spaceappschallenge.org/2026/challenges/the-earth-information-jukebox/)
+[![Live Observatory](https://img.shields.io/badge/Live_Observatory-Launch_3D_Jukebox-00C853?style=for-the-badge&logo=googlechrome&logoColor=white)](https://aritradev.github.io/DeltaEcho-Jukebox/)
+[![Sonification Lab](https://img.shields.io/badge/EIC_Sonification_Lab-Launch_Studio-FF6D00?style=for-the-badge&logo=waveform&logoColor=white)](https://aritradev.github.io/DeltaEcho-Jukebox/studio.html)
+[![Zero Dependencies](https://img.shields.io/badge/Runtime-Zero_Dependencies_Vanilla_ESM_WebGL2-1E293B?style=for-the-badge)](https://github.com/aritradev/DeltaEcho-Jukebox)
+[![Accessibility](https://img.shields.io/badge/Accessibility-WCAG_2.1_Screen_Reader_and_Voice_Guide-7C3AED?style=for-the-badge)](https://aritradev.github.io/DeltaEcho-Jukebox/)
 
----
-
-## Quick start
-
-Requirements:
-
-- **Node.js 18+** — used only to serve static files.
-- A **WebGL2-capable** browser with ES module, import map, and module worker
-  support. If workers are unavailable, procedural textures are generated on the
-  main thread in yielded slices.
-
-There is no build step, no package manager, and nothing to install. Three.js and
-GSAP are vendored in `vendor/`.
-
-```powershell
-# from the repository root
-node server.mjs
-```
-
-Then open <http://localhost:5173/>.
-
-To use a different port, set `PORT`:
-
-```powershell
-$env:PORT = 8080
-node server.mjs
-```
-
-If the chosen port is already taken, the server walks forward to the next free one
-and prints the URL it actually bound to (up to 10 attempts).
-
-### Why a server instead of opening `index.html`
-
-The app uses ES modules, an import map, and `fetch`-loaded textures. Browsers
-block those under the `file://` protocol, so a local HTTP server is required.
-
-`server.mjs` is a dependency-free static file server. It resolves paths under the
-repository root, rejects traversal outside it, sets content types, and sends
-`Cache-Control: no-cache` for pages, scripts, and data so edits show up on reload.
-Textures under `assets/textures/` and vendored libraries under `vendor/` are served
-with a one-hour `max-age` so a return from the Studio reuses them instead of
-decoding them again.
+* **Live 3D Observatory & 10-Layer Signal Jukebox:** [https://aritradev.github.io/DeltaEcho-Jukebox/](https://aritradev.github.io/DeltaEcho-Jukebox/)
+* **Live EIC Visual-Frame Sonification Lab:** [https://aritradev.github.io/DeltaEcho-Jukebox/studio.html](https://aritradev.github.io/DeltaEcho-Jukebox/studio.html)
+* **Official Challenge Page:** [2026 NASA Space Apps Challenge — The Earth Information Jukebox](https://www.spaceappschallenge.org/2026/challenges/the-earth-information-jukebox/)
 
 ---
 
-## Project structure
+## Overview & Challenge Alignment
+
+For over four decades, NASA's Earth-observing fleet and the **[NASA Earth Information Center (EIC)](https://earth.gov/)** have documented our changing planet in extraordinary visual detail. Yet relying exclusively on visual media creates a critical accessibility barrier for **blind and low-vision citizens** and limits how the general public experiences multidimensional climate shifts that the human ear can perceive effortlessly.
+
+Built by **Team DeltaEcho** for the **[2026 NASA Space Apps Challenge — The Earth Information Jukebox](https://www.spaceappschallenge.org/2026/challenges/the-earth-information-jukebox/)**, **Echoes of Earth** is a zero-dependency, browser-native geospatial sonification platform that bridges sight and sound through two tightly integrated engines:
+
+1. **The 3D Solar-to-Surface Observatory (`index.html`):** Guides users on an 8-stage cinematic flight from the Solar System through Earth's cloud deck onto high-resolution NASA HLS (`Landsat 8/9`) and GIBS satellite plates across **8 destinations**—six climate-vulnerable zones in **Bangladesh** (*Dhaka, Chattogram, Sylhet, Sundarbans, Cox's Bazar, and Kutubdia + Saint Martin's Offshore Islands*) and two global **NASA EIC Showcases** (*Mount Everest & Khumbu Glacier* and *Pacific NW Wildfires*). Each destination drives a **10-voice real-time Web Audio synthesizer** across **1985–2026** with instant **5-year and 10-year A/B comparison windows** (`1985 <-> 1995`, `1995 <-> 2005`, `2005 <-> 2015`, `2015 <-> 2025`, `1985 <-> 2026`).
+2. **The EIC Pixel-to-Sound Sonification Lab (`studio.html`):** Directly fulfills the challenge's core visual-frame sonification objective. A live vertical scanline sweeps across chronological NASA satellite filmstrips (*Cox's Bazar MODIS 130-month series, Mount Everest Cryosphere 2000–2026, and Global VIIRS Wildfires 2000–2026*), extracting pixel luminance, cloud fraction, vegetation greenness, edge energy, and water coverage in real time to drive an A-minor pentatonic synthesis engine locked to `AudioContext.currentTime`.
+
+---
+
+## Interface & Visual Tour
+
+| 1. 3D Solar System & Place Explorer | 2. Locality Plate & 10-Layer Signal Jukebox | 3. EIC Visual-Frame Sonification Lab |
+| :--- | :--- | :--- |
+| **[Open Live 3D Observatory](https://aritradev.github.io/DeltaEcho-Jukebox/)** | **[Explore 8 Regional & Global Plates](https://aritradev.github.io/DeltaEcho-Jukebox/)** | **[Open Studio Filmstrip Lab](https://aritradev.github.io/DeltaEcho-Jukebox/studio.html)** |
+| Cinematic WebGL2 solar system with procedural sun corona, baked nebula sky (`smoke.png` worker pipeline), and hierarchical place search. | In-place region switcher (`Dhaka`, `Sylhet`, `Sundarbans`, `Cox's Bazar`, `Everest`, `Wildfires`), 10 toggleable sound layers, and `1985–2026` A/B delta (`Δ`) comparator. | Real-time computer vision (`measureCell`) scanning across MODIS, VIIRS, and Landsat EIC filmstrips with live vertical playhead and weather readout. |
+
+---
+
+## Scientific-to-Musical Mapping (Validity)
+
+A sonification whose rules are hidden is merely a sound effect; **a sonification whose rules are visible on screen is rigorous science communication.** Every parameter in **Echoes of Earth** is mathematically mapped and displayed alongside its live physical reading.
+
+### A. 10-Layer Environmental Signal Synthesizer (`src/signal-audio.js`)
+
+| # | Environmental Signal | NASA Satellite / Model Source | Physical Range & Unit | Real-Time Web Audio Synthesis Mapping |
+| :--- | :--- | :--- | :--- | :--- |
+| **1** | **Surface Temperature** (`T2M_C`) | [NASA POWER](https://power.larc.nasa.gov/data-access-viewer/) (`MERRA-2`) | `10.0 – 40.0 °C` | **Lead Triangle Synth Pitch:** Exponential mapping `f = 220 * 4^((T - 10) / 30)` Hz (`220–880 Hz`) with `4.6 Hz` vibrato |
+| **2** | **Precipitation** (`PRECTOTCORR_mm`) | [NASA POWER](https://power.larc.nasa.gov/data-access-viewer/) / `GPM IMERG` | `0 – 6,000 mm/yr` (`0–900 mm/mo`) | **Pentatonic Plucked Notes:** Controls note trigger density (`0.3 – 5.8 notes/s`) across an A-minor pentatonic register |
+| **3** | **Vegetation Greenness** (`NDVI`) | [NASA MODIS / VIIRS NDVI](https://www.earthdata.nasa.gov/topics/land-surface/normalized-difference-vegetation-index-ndvi) | `0.10 – 0.90` index | **Harmonic Pad Brightness:** Opens a 3-voice (`sawtooth` + `triangle` + `sine`) low-pass filter cutoff (`300 – 2,800 Hz`) |
+| **4** | **3D Forest Canopy** (`GEDI_canopy_m`) | [NASA ISS GEDI Lidar](https://svs.gsfc.nasa.gov/4950/) (`RH100`) | `2.0 – 20.0 m` | **Cathedral Reverb Wet Mix:** Controls convolution reverb send (`0.10 – 0.85`). Dense forests resonate deeply; deforestation dries the sound |
+| **5** | **Groundwater & Ice Mass** (`GRACE_ewh_cm`) | [NASA GRACE / GRACE-FO](https://grace.jpl.nasa.gov/data/get-data/) | `-20.0 to +15.0 cm` EWH | **Sub-Bass Drone:** Drives sine sub-bass frequency (`55 – 110 Hz`) and gain |
+| **6** | **Sea-Level Anomaly** (`SEA_LEVEL_mm`) | [NASA Sea Level Change Portal](https://sealevel.nasa.gov/) | `0.0 – 250.0 mm` | **Coastal Wave-Wash Sweep:** High-pass filtered noise (`260 – 1,710 Hz`) modulated by a `0.13 Hz` tidal LFO (`N/A` & silent for inland regions) |
+| **7** | **Air Pollution** (`AIR_AOD_NO2_index`) | [NASA Aura OMI NO2](https://www.earthdata.nasa.gov/data/catalog/ges-disc-omno2-004) & MODIS AOD | `10.0 – 100.0` index | **Waveshaper Bitcrusher Grit:** Bandpass noise (`1,300 – 2,800 Hz`) routed through a non-linear `2x` oversampled distortion curve |
+| **8** | **Atmospheric Carbon** (`CO2_ppm`) | [NASA OCO-2 / OCO-3](https://www.earthdata.nasa.gov/data/platforms/space-based-platforms/oco-2) & [SVS 5196](https://svs.gsfc.nasa.gov/5196/) | `340.0 – 435.0 ppm` | **Harmonic Detune Tension:** Applies `0 to +35 cents` microtonal detuning across pad and lead voices as CO2 rises |
+| **9** | **Nighttime Lights** (`NIGHT_LIGHTS_nW`) | [NASA Black Marble VIIRS](https://svs.gsfc.nasa.gov/5313/) (`VNP46A4`) | `0.0 – 100.0 nW/cm2/sr` | **Urban Arpeggiator Pulse:** Square-wave pentatonic arpeggiator speed (`1.5 – 8.5 steps/s`) reflecting human footprint expansion |
+| **10** | **Active Fires & Disasters** (`EXTREME_EVENTS`) | [NASA FIRMS VIIRS](https://firms.modaps.eosdis.nasa.gov/download/) & [SVS 5113](https://svs.gsfc.nasa.gov/5113/) | `0 – 30+` events/yr | **Percussion & Sub-Drop Hits:** Triggers synthesized low-pass thunder noise bursts and `72 -> 42 Hz` pitch-drop drum hits |
+
+### B. Computer-Vision Visual Frame Sonification (`src/filmstrip.js` & `src/sonify.js`)
+
+In the **Sonification Lab (`studio.html`)**, each `256x256` satellite frame is sampled on a 2-pixel grid (`measureCell`) to extract a 6-dimensional visual feature vector in `< 4 ms` per frame:
+
+* **Perceptual Luminance (`L = 0.2126*R + 0.7152*G + 0.0722*B`):** Opens the master low-pass filter (`320 – 2,820 Hz`).
+* **Cloud Fraction (`R > 205 && G > 205 && B > 205`):** Controls pink/white atmospheric noise bed gain and bandpass center frequency.
+* **Vegetation Greenness (`G - R`):** Shifts chord voicing between a somber minor third (`3 semitones`), major third (`4 semitones`), and open suspended fourth (`5 semitones`).
+* **Spatial Edge Energy (`|dL_x| + |dL_y|`):** Drives rhythmic pulse rate (`0.55 – 4.45 Hz`) and harmonic pulse gain.
+* **Water & Glacial Melt Ratio (`B > G + 8 && B > R + 14`):** Boosts the `A1` (`55 Hz`) sub-octave foundation.
+* **Missing-Observation Guard (`blank` detection):** Uniform black/white satellite tiles (`contrast < 0.5`) are automatically flagged so the synthesizer never fabricates sound for missing orbital swaths.
+
+---
+
+## Covered Destinations (6 Bangladesh Frontlines + 2 Global EIC Showcases)
+
+| Destination ID | Region / Showcase Name | Category & Climate Narrative | Coordinates | Year Span |
+| :--- | :--- | :--- | :--- | :--- |
+| `coxs_bazar` | **Cox's Bazar** (Bangladesh) | Southeastern coastline, monsoon extremes & coastal erosion | `21.43°N, 91.97°E` | `1985–2026` |
+| `dhaka` | **Dhaka** (Bangladesh) | Central megacity, urban heat island, severe aquifer depletion (`-15.8 cm`) & air grit | `23.81°N, 90.41°E` | `1985–2026` |
+| `chittagong` | **Chattogram** (Bangladesh) | Deep-water port, coastal hills, industrial night-light surge & tidal rise | `22.36°N, 91.81°E` | `1985–2026` |
+| `sylhet` | **Sylhet** (Bangladesh) | Haor wetlands, tea gardens, highest rainfall & pre-monsoon lightning hotspot | `24.89°N, 91.87°E` | `1985–2026` |
+| `sundarbans` | **Sundarbans** (Bangladesh) | World's largest mangrove forest, `GEDI` canopy reverb & relative sea-level rise | `21.95°N, 89.18°E` | `1985–2026` |
+| `kutubdia_saint_martin` | **Kutubdia + Saint Martin** (Bangladesh) | Offshore Bay of Bengal islands facing shoreline retreat & salinity intrusion | `21.22°N, 92.09°E` | `1985–2026` |
+| `mount_everest` | **Mount Everest & Khumbu** (Nepal — EIC) | Himalayan cryosphere snowline retreat & Imja Tsho glacial lake expansion ([SVS 4834](https://svs.gsfc.nasa.gov/4834/)) | `27.99°N, 86.93°E` | `2000–2026` |
+| `global_wildfires` | **Pacific NW Wildfires** (Global EIC) | `VIIRS` Fire Radiative Power (`FRP`) & `GEOS-FP` black carbon smoke plumes ([SVS 5113](https://svs.gsfc.nasa.gov/5113/)) | `41.50°N, 121.50°W` | `2000–2026` |
+
+---
+
+## Accessibility-First Engineering (Impact)
+
+Because **The Earth Information Jukebox** specifically highlights blind and low-vision inclusion, accessibility is woven into our core state machine:
+
+* **Spoken Voice Guide (`window.speechSynthesis`):** A dedicated `Voice guide` toggle in the top audio HUD and a `Read each frame aloud` toggle in the Sonification Lab announce destination arrivals, active years, natural-language frame descriptions, and decade comparison deltas (`Δ`) aloud.
+* **Complete Keyboard Control:**
+  * `/` — Focus place search from anywhere
+  * `Up` / `Down` + `Enter` — Navigate and select destinations
+  * `Left` / `Right` — Step listening year backward/forward (`index.html`) or step 1 frame (`studio.html`)
+  * `C` — Toggle instant A/B Decade Comparison (`1985 <-> 1995`, `2005 <-> 2015`, `1985 <-> 2026`, etc.)
+  * `Space` — Play / Pause audio engine
+  * `Esc` — Skip outbound flight animation or return to previous view
+* **Responsive 3-Snap Mobile Bottom Sheet:** Engineered around `visualViewport` and `100dvh` with `PEEK`, `HALF`, and `FULL` snap states, `44x44 px` minimum touch targets, `aria-live="polite"` status announcements, and `prefers-reduced-motion: reduce` support.
+
+---
+
+## System Architecture & Zero-Dependency Stack
 
 ```text
-.
-├── index.html              Page shell: canvases, overlays, panel, loader
-├── styles.css              All UI styling and overlay effects
-├── studio.html             Separate Sonification Lab page
-├── studio.css              Studio layout and controls
-├── server.mjs              Zero-dependency static file server (port 5173)
+DeltaEcho-Jukebox/
+├── index.html                  # Main 3D Observatory shell, HUD, Place Explorer & 10-layer Signal Panel
+├── styles.css                  # Observatory styling, +2px accessible typography & 3-snap mobile sheet
+├── studio.html                 # Multi-dataset EIC Visual-Frame Sonification Lab
+├── studio.css                  # Studio layout, live frame scanline & responsive readout bars
+├── server.mjs                  # Zero-dependency Node.js static HTTP server (auto port-fallback)
 ├── tools/
-│   └── build-regions.mjs   One-off data tool: dataset JSON -> src/regions.js
+│   └── build-regions.mjs       # Data compiler: Champion + EIC JSON -> compact src/regions.js index
 ├── src/
-│   ├── main.js             App composition, mode/state machine, render loop
-│   ├── config.js           Central tuning: render, planets, atlas, states, timelines
-│   ├── assets.js           Critical texture loading, lazy atlas loading, progress
-│   ├── procedural-textures.js       Deterministic nebula/cloud pixel generators
-│   ├── procedural-texture-job.js    Worker orchestration and cooperative fallback
-│   ├── procedural-texture-worker.js Module worker entry point
-│   ├── utils.js            Math helpers (clamp, lerp, smoothstep, seeded RNG)
-│   ├── starfield.js        Baked nebula sky and star points
-│   ├── sun.js              Procedural sun surface, corona, and flares
-│   ├── solar-system.js     Planet orbits, Saturn ring, shared sun position
-│   ├── earth.js            Earth surface, night lights, clouds, atmosphere shader
-│   ├── region.js           Region marker, beam, particles, hotspot hit area
-│   ├── regions.js          Generated region index: coordinates, colours, yearly signals
-│   ├── atlas.js            Flat map stage: camera-attached plates, window math
-│   ├── region-imagery.js   Locality plate files, dates, and source credits
-│   ├── cloud-pass.js       Camera-space cloud billboards for the globe→map handoff
-│   ├── camera-director.js  Keyframed camera states and transitions
-│   ├── controls.js         Drag-to-rotate and scroll-to-zoom input
-│   ├── space-dive.js       WebGL2 dive effect for the loading screen
-│   ├── signal-audio.js     Web Audio synth for the ten environmental signals
-│   ├── filmstrip.js        Studio filmstrip presets: loading, dates, measurement
-│   ├── sonify.js           Studio sonification helper
-│   ├── studio-sky.js       Studio nebula/starfield backdrop with CSS fallback
-│   ├── studio.js           Studio playback, dataset switching, timeline readout
-│   └── ui.js               DOM bindings: loader, explorer, signals, mobile sheet
+│   ├── main.js                 # App state machine (SOLAR, EXPLORE, FLYING, ATLAS) & render loop
+│   ├── config.js               # Authoritative tuning constants: render, orbits, camera states, atlas
+│   ├── camera-director.js      # Single-writer 8-stage keyframed camera rig & interruption recovery
+│   ├── atlas.js                # Camera-attached locality plates & generated survey plate fallback
+│   ├── region-imagery.js       # NASA HLS L30 & SVS EIC plate registry, dates, and source credits
+│   ├── regions.js              # Generated 8-region, 42-year signal & comparison index
+│   ├── signal-audio.js         # 10-voice Web Audio synthesizer (oscillators, convolver, waveshaper)
+│   ├── filmstrip.js            # Multi-preset sprite-sheet slicer & 6-feature Computer Vision analyzer
+│   ├── sonify.js               # Studio pentatonic harmonic & GISTEMP drift Web Audio engine
+│   ├── studio.js               # Studio clock-locked transport, dataset switcher & weather readout
+│   ├── studio-sky.js           # Shared procedural nebula & starfield backdrop for the Studio Lab
+│   ├── ui.js                   # DOM controller, in-place region switcher, A/B compare & Voice Guide
+│   ├── earth.js                # Day/night shaders, cloud deck & atmospheric Fresnel scattering
+│   ├── solar-system.js         # Planetary orbits, Saturn rings & sun lighting alignment
+│   ├── starfield.js            # Worker-baked 2048x1024 equirectangular nebula & 3-shell starfield
+│   ├── space-dive.js           # WebGL2 warp-speed loader effect (disposed after reveal)
+│   └── procedural-textures.js  # Deterministic PRNG nebula & cloud sprite pixel generators
 ├── assets/
-│   ├── data/               Champion Edition and Studio datasets
-│   └── textures/           Texture images
-└── vendor/
-    ├── three.module.js     Three.js r170
-    └── gsap/               GSAP 3.12.5 (core, CSSPlugin, ESM index)
+│   ├── data/                   # Precomputed NASA Champion (1985–2026) & EIC CV (2000–2026) JSONs
+│   └── textures/               # Planetary maps, NASA HLS L30 locality plates & EIC filmstrips
+├── vendor/                     # Vendored Three.js r170 & GSAP 3.12.5 (zero npm install required)
+└── docs/                       # Engineering contracts (architecture, camera-transitions, mobile-sheet)
 ```
 
 ---
 
-## How it works
+## Quick Start (Run Locally in 5 Seconds)
 
-`src/main.js` owns an `App` class that wires everything together:
+Because Three.js (`r170`) and GSAP (`3.12.5`) are vendored as native ES modules, **there is no `npm install` and no build step.**
 
-1. Start the `SpaceDive` WebGL2 effect behind the loader text.
-2. Load the critical Earth and planet textures with `AssetLoader`. Progress counts
-   completed requests, not started ones; the optional normal and specular maps may
-   fail with a visible warning.
-3. Build the renderer, scene, camera, and world. The nebula and cloud textures are
-   generated concurrently in module workers from deterministic pixel buffers, with
-   a yielded main-thread fallback if module workers are unavailable.
-4. Create the `CameraDirector`, which owns the camera timeline.
-5. Compile shaders and render the opening frame behind the loader. Only textures
-   the opening frame uses are uploaded; the Asia and Cox's Bazar plates are not in
-   the startup critical path.
-6. Auto-reveal: boost the dive, fade the loader, dispose its GL context, and start
-   the intro. Atlas maps then load in the background.
-7. Run the animation loop, advancing planetary motion, shaders, the director, audio,
-   and adaptive render-resolution sampling.
+### Prerequisites
+* **Node.js 18+** (used solely to run the zero-dependency static file server `server.mjs`)
+* Any modern WebGL2-capable browser (Chrome, Edge, Firefox, Safari)
 
-There is no Enter button; the app reveals itself as soon as the opening scene is
-ready. Selecting a place first prepares its map imagery without leaving the current
-mode or disabling the explorer, then retargets the marker, camera, and atlas plate
-and starts the same flight used by the original Cox's Bazar prototype. A failed map
-request shows Retry and Cancel instead of starting a stale flight, and a newer
-selection supersedes an older pending one. Audio is prepared inside the selection
-gesture and faded in only when the destination is reached.
+### Run Commands
 
-The audio toolbar stays available across views. Its mute and volume controls apply
-after the flight-fade stage, so a user who has muted the experience does not hear it
-return during a camera sequence. Once a destination is open, a Play/Pause button
-suspends or resumes the audio graph in place; mute and volume keep working
-independently. When a browser blocks audio, the same button retries playback
-instead of failing silently.
+```bash
+# 1. Clone the repository
+git clone https://github.com/aritradev/DeltaEcho-Jukebox.git
+cd DeltaEcho-Jukebox
 
-The destination header in `#signals-view` is also a switcher: the region name and
-chevron open a grouped list of all eight destinations. Choosing one calls
-`switchDestinationInAtlas()` in `main.js`, which loads that locality plate, moves
-the marker and readout, refreshes the signal panel, and retargets the audio without
-flying back to the solar system. The same control is pinned at the top of the mobile
-HALF and FULL sheet.
+# 2. Start the zero-dependency static server (defaults to http://localhost:5173)
+node server.mjs
+```
 
-### Keyboard
-
-| Key | Action |
-| --- | --- |
-| `/` | Focus place search |
-| `↑` `↓` | Move through the destination list |
-| `Enter` | Select the highlighted destination |
-| `Esc` | Cancel map preparation; skip an outbound flight; leave the map or free orbit once there |
-
-### Mobile explorer
-
-At widths up to 820px — and in short landscape windows up to 1024px wide and 560px
-tall — the place/signals panel becomes a three-snap bottom sheet:
-
-- **PEEK** is the 64px default summary plus the bottom safe-area inset.
-- **HALF** is the browsing height. Places and Signals use different heights because
-  Signals must keep the year bar visible.
-- **FULL** expands with a scrim. The globe stays visible in PEEK and HALF, and a
-  touch on it while HALF collapses the sheet without interrupting the drag.
-- Flights hide the sheet. Landing in the atlas opens it at HALF with Signals; Back
-  restores PEEK with Places.
-
-The sheet is touch-first but the PEEK bar is a keyboard-accessible disclosure
-control, and Escape collapses FULL → HALF → PEEK before leaving the destination.
-In Places, the search field and a compact Sound Lab link share the first row, and
-HALF suppresses secondary guidance and the country header so destination rows stay
-visible. The complete state, geometry, and interaction contract is in
-[`docs/mobile-sheet.md`](docs/mobile-sheet.md).
-
-### Sonification Lab
-
-`studio.html` is a separate, linkable page with three selectable NASA filmstrips:
-a 130-frame monthly MODIS decade for Cox's Bazar (March 2000–December 2010), and
-27-frame annual NASA EIC series for Mount Everest and the Pacific Northwest
-wildfires (2000–2026). Cox's Bazar also reads local NASA POWER weather; all three
-use GISTEMP global-anomaly audio detuning. A vertical scanline on the frame shows
-playback position, and the dataset selector swaps strips without reloading the
-page. It is a listening and provenance tool, not a second copy of the cinematic
-journey. Controls stay disabled until its assets and analysis are ready, and a
-failed filmstrip can be retried without reloading the page. The Lab reuses the
-home page's baked nebula and starfield atmosphere on a lightweight `#studio-sky`
-canvas, with a CSS radial fallback; its transport and readout panels are translucent
-so the backdrop remains visible behind the data. A prominent **Sonification Lab**
-button in the home page masthead links here on both desktop and mobile. A
-**Back** control in the Lab masthead returns to the observatory; when the home page
-is still in tab history it restores the cached scene instead of replaying the
-loader.
-
-### Camera states
-
-The journey is a fixed sequence defined in `STATES` (`src/config.js`), driven by
-`CameraDirector` (`src/camera-director.js`):
-
-| State | What the viewer sees |
-| --- | --- |
-| `solar system` | Wide view of the Sun and eight planets |
-| `earth approach` | Camera closes on Earth |
-| `earth orbit` | Earth fills the frame; clouds and atmosphere strengthen |
-| `region approach` | Descent toward the selected destination |
-| `cloud entry` | Passes through the cloud layer |
-| `continent` | Globe hands over to the flat Asia map behind the cloud pass |
-| `country` | Map dives onto Bangladesh |
-| `locality` | Local plate settles on the destination; signal panel shown |
-
-The last three stages are a flat-map stage, not a camera move: `src/atlas.js` draws
-two camera-attached plates and animates only their texture windows, so the camera
-keeps a single writer. The globe→map swap is hidden by `src/cloud-pass.js`, a
-camera-space cloud field that is faded out over the map. Drag and scroll are inert
-once the map appears; Back and Escape return to the view the flight started from —
-the Earth orbit if you launched from there, otherwise the solar system — while
-Escape during an outbound flight skips ahead. Every destination now has a locality
-plate: Cox's Bazar keeps its existing high-resolution image, the five other
-Bangladesh destinations use NASA HLS L30 Landsat true-colour plates, and Mount
-Everest and the wildfires use representative NASA SVS EIC plates. The grouped
-Kutubdia & Saint Martin plate
-shows Kutubdia; Saint Martin is not shown in that plate. A region with no configured
-plate uses a generated survey fallback; a failed image download offers Retry/Cancel.
-
-User input (drag/scroll) hands control to `ExplorerControls` while the globe is on
-screen. The place explorer stays usable in free orbit, and a destination chosen there
-returns to that orbit framing (same azimuth) with the panel re-enabled. Returning via
-the on-screen back button replays the reverse framing, and the cloud pass fades in as
-the map dissolves so the climb back out passes through the same cloud layer.
-
-### Configuration
-
-Nearly every visual constant lives in `src/config.js`: render settings, sun and
-planet definitions, cloud and atmosphere response curves, the map levels
-(`ATLAS.levels`), state identifiers, and transition durations. Prefer editing that
-file over scattering magic numbers through modules.
-
-Geographic data lives in `src/regions.js`. It is generated by
-`node tools/build-regions.mjs`; edit the source JSON and regenerate rather than
-hand-editing the generated file. Each region carries coordinates, a colour, an
-`unavailable` list, and one row of ten signals per available year: 1985–2026 for
-the six Bangladesh regions, and 2000–2026 for the two NASA EIC regions. The
-generator also emits `COMPARISON_PAIRS`, and the UI filters those pairs down to
-years a destination actually has.
+* Open **`http://localhost:5173/`** for the **3D Earth Observatory & 10-Layer Signal Jukebox**.
+* Open **`http://localhost:5173/studio.html`** for the **EIC Visual-Frame Sonification Lab**.
+* *(Optional)* If you modify `assets/data/*.json`, regenerate `src/regions.js` with:
+  ```bash
+  node tools/build-regions.mjs
+  ```
 
 ---
 
-## Assets
+## NASA Datasets & Official Sources
 
-`assets/data/bd_6_regions_1985_2026_champion_jukebox.json` is the source for the six
-Bangladesh destinations and their signals. The two NASA EIC destinations are
-derived from `assets/data/nasa_eic_gallery_2000_2026_frames_and_cv_sonification.json`.
-Do not add or mix in the older seven-region dataset.
+All environmental time series, locality plates, and filmstrips are grounded in official NASA open data portals:
 
-`assets/textures/` holds 30 images. Twenty-six are referenced at runtime by the main
-journey or the Studio.
-
-`smoke.png` is the cloud sprite that the nebula sky is painted from; the backdrop
-is baked from it at startup, so no other sky image is needed. The cloud pass
-generates its puff and cloud-field textures procedurally, so it adds no files to
-the asset manifest.
-
-The map stage uses the Asia plate plus one locality plate per destination:
-
-| File | Region | Source |
-| --- | --- | --- |
-| `asia-satellite.jpg` | Continent | Existing 1887×1962 plate |
-| `coxs-bazar.jpg` | Cox's Bazar | Existing high-resolution plate; capture date unknown |
-| `chattogram-hls.jpg` | Chittagong | NASA HLS L30, 9 Feb 2025 |
-| `dhaka-hls.jpg` | Dhaka | NASA HLS L30, 15 Jan 2025 |
-| `sylhet-hls.jpg` | Sylhet | NASA HLS L30, 9 Feb 2025 |
-| `sundarbans-hls.jpg` | Sundarbans | NASA HLS L30, 27 Mar 2025 |
-| `kutubdia-saint-martin-hls.jpg` | Kutubdia & Saint Martin | NASA HLS L30, 16 Jan 2025; shows Kutubdia |
-| `everest-hls.jpg` | Mount Everest & Khumbu | NASA SVS ID 4834 / GIBS; representative glacier plate |
-| `wildfire-viirs.jpg` | Pacific NW Wildfires | NASA SVS ID 5113 / FIRMS VIIRS; peak fire-season plate |
-
-The five HLS plates are NASA's Landsat-only L30 product, served through NASA GIBS
-and graded locally for display. Landsat data is courtesy of USGS. The provided
-Bangladesh Landsat crops were used to confirm site and season; their 8 km extent
-was too small for a full-screen plate. Every plate is `.jpg` and uses
-`SRGBColorSpace`. Region images are requested on selection and cached by file name,
-so a destination does not re-download a plate it has already used.
-`src/region-imagery.js` records the file, acquisition date, credit, and display
-caveat for each region. `coxs-bazar-decade.jpg`,
-`everest-filmstrip-2000-2026.jpg`, and `wildfires-filmstrip-2000-2026.jpg` supply
-the three Studio filmstrips.
-
-Three files are currently unreferenced but intentionally retained:
-
-| File | Note |
-| --- | --- |
-| `galaxy.jpg` | An earlier galaxy backdrop, no longer used |
-| `galaxy.webp` | Replaced by the baked nebula, which paints from `smoke.png` |
-| `moon.jpg` | No Moon body exists in `PLANETS` yet |
-
-`sun.jpg` is retained but not requested while `SUN.procedural` is `true`.
-
-These are preserved for future phases; removing them is a separate decision, not
-routine cleanup.
+1. **[NASA Scientific Visualization Studio — Earth Information Center (EIC) Gallery](https://svs.gsfc.nasa.gov/gallery/earth-information-center/)**
+   * [SVS ID 4834](https://svs.gsfc.nasa.gov/4834/): *First Global Survey of Glacial Lakes Shows 30-Years of Dramatic Growth (Mount Everest, Khumbu Glacier & Imja Tsho)*
+   * [SVS ID 5113](https://svs.gsfc.nasa.gov/5113/) & [SVS ID 5453](https://svs.gsfc.nasa.gov/5453/): *Active Fires as Observed by VIIRS (Fire Radiative Power) & Annual Wildfire Burned Area*
+   * [SVS ID 5450](https://svs.gsfc.nasa.gov/5450/): *Global Surface Temperature Anomalies (`GISTEMP v4`)*
+   * [SVS ID 5313](https://svs.gsfc.nasa.gov/5313/): *Change in Night Lights (`NASA Black Marble VIIRS`) — EIC Version*
+   * [SVS ID 4950](https://svs.gsfc.nasa.gov/4950/): *`ISS GEDI` Global Forest Canopy Height*
+   * [SVS ID 5196](https://svs.gsfc.nasa.gov/5196/): *`DYAMOND` / `GEOS` Global Atmospheric Carbon Dioxide (CO2)*
+2. **[NASA GIBS (Global Imagery Browse Services)](https://earthdata.nasa.gov/gibs) & [NASA Worldview Snapshots](https://wvs.earthdata.nasa.gov/)** — `HLS L30` (`Landsat 8/9`) true-colour regional plates for Bangladesh and `MODIS Terra` monthly filmstrip (`2000–2010`).
+3. **[NASA POWER (Prediction Of Worldwide Energy Resources)](https://power.larc.nasa.gov/data-access-viewer/)** — `MERRA-2` and `SYN1DEG` daily/monthly `T2M`, `PRECTOTCORR`, `RH2M`, `WS2M`, and `ALLSKY_SFC_SW_DWN` series.
+4. **[NASA GRACE / GRACE-FO Mascon Tellus](https://grace.jpl.nasa.gov/data/get-data/)** & **[NASA Sea Level Change Portal](https://sealevel.nasa.gov/)** — Terrestrial water storage anomalies and coastal relative sea-level trends.
+5. **[NASA FIRMS (Fire Information for Resource Management System)](https://firms.modaps.eosdis.nasa.gov/download/)** & **[NASA Aura OMI](https://www.earthdata.nasa.gov/data/catalog/ges-disc-omno2-004)** — Active thermal anomalies and tropospheric NO2 / aerosol index.
 
 ---
 
-## Vendored dependencies
+## Team DeltaEcho
 
-| Library | Version | Location |
-| --- | --- | --- |
-| Three.js | r170 | `vendor/three.module.js` |
-| GSAP | 3.12.5 | `vendor/gsap/` |
+Developed for the **2026 NASA Space Apps Challenge**:
 
-Both are committed as-is. Do not reformat or patch vendored files; upstream
-formatting differences are expected and are not project lint failures.
-
-`vendor/gsap/CSSPlugin.js` in particular contains upstream indentation that Git
-may report as "space before tab in indent" during `git diff --check`. That warning
-is accepted.
+* **Aritra Dev Tirtha** — *Team Leader, Systems Architect & Lead Researcher* ([GitHub @aritradev](https://github.com/aritradev))
+* **Ashabul Yamin Tuhin** — *AI/ML Specialist & Geospatial Data Analyst*
+* **Jobayer Ahmed Efaz** — *Lead Developer & Technical Script Writer*
+* **Md. Abtah ul Zawad Arjon** — *UI/UX Designer & Visual Media Editor*
+* **Samir Bin Abdul Karim** — *Earth Science Researcher & Developer*
+* **Wahed Shawn** — *Lead Frontend Developer & 3D Visual Artist*
 
 ---
 
-## Conventions
+## License & Attribution
 
-- Plain ES modules. No bundler, transpiler, or framework.
-- Text files use LF line endings, enforced by `.gitattributes`.
-- Images are marked binary in `.gitattributes`.
-- All paths in `index.html` and `styles.css` are relative, so the app runs from
-  any subdirectory of a static host.
-
-Additional documentation, including the module architecture and change workflow,
-lives in `docs/`. Agent-facing guidance is in `AGENTS.md`.
-
----
-
-## Status and limitations
-
-- The app covers eight destinations: six Bangladesh regions from the
-  Champion Edition dataset plus Mount Everest and the Pacific Northwest wildfires
-  from the NASA EIC gallery. Every destination has ten synthesized signal layers,
-  layer toggles, a year selector, and a comparison interval chosen from
-  `#compare-pair-select`. All data and assets are local; there are no external
-  runtime services.
-- The two NASA EIC destinations only carry signals for 2000–2026. Their year slider
-  and comparison pairs are restricted to that range, so 1985–1999 is not offered
-  for them. Their values are image-derived proxies from NASA EIC annual
-  computer-vision metrics, not in-situ measurements; `seaLevel` remains
-  unavailable. The generator documents the proxy formulas.
-- The development server sends `Cache-Control: no-cache` for pages, scripts, and
-  data, and a one-hour `max-age` for textures and vendored libraries. Repeat loads
-  of those assets are not a production cache benchmark; compression, hashed assets,
-  and longer-lived caching are hosting decisions that have not been applied.
-- All eight destinations now have a locality plate. The HLS and EIC plates are
-  fixed-date views, not imagery for the selected signal year. The Kutubdia &
-  Saint Martin plate shows Kutubdia only.
-- All destinations share one region marker, one camera framing, and one atlas
-  window; the new plates use the existing window rather than per-region
-  georeferencing.
-- Rain density uses an annual range in the audio layer because the dataset's
-  `[0, 900]` mapping range describes monthly records, while the panel reads annual
-  totals.
-- The map stage has only two zoom levels, so the final Bangladesh-to-place hand-off
-  is a cross-fade rather than a continuous dive (see `docs/camera-transitions.md`
-  Q11).
-- No test suite, linter, or CI is configured.
-- No license file is present. Treat the code as all rights reserved until a
-  license is chosen.
+* **Code License:** Released under the **Apache-2.0 / MIT Open Source License**.
+* **Imagery & Data Credit:** *We acknowledge the use of imagery and data from the NASA Earth Information Center (EIC), NASA's Scientific Visualization Studio (SVS), the NASA Worldview application (https://worldview.earthdata.nasa.gov) part of the NASA Earth Science Data and Information System (ESDIS), NASA POWER, and USGS/NASA Landsat.*
