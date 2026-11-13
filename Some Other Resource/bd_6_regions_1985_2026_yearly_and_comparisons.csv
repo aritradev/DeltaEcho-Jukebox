@@ -1,0 +1,253 @@
+region_id,region_name,category,latitude,longitude,year,mean_T2M_C,max_monthly_T2M_C,mean_pitch_Hz,total_rain_mm,mean_SOLAR_kWh,mean_NDVI,mean_GEDI_canopy_m,mean_GRACE_ewh_cm,mean_SEA_LEVEL_mm,mean_AIR_AOD_NO2_index,mean_CO2_ppm,mean_NIGHT_LIGHTS_nW,total_EXTREME_EVENTS
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1985,25.32,28.81,452.4,2097.2,4.79,0.472,8.69,1.64,0.0,26.8,346.51,14.35,13
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1986,25.66,29.3,460.1,2126.3,4.79,0.465,8.58,1.45,0.0,28.1,347.9,14.42,10
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1987,25.34,28.8,453.2,2079.1,4.79,0.464,8.57,1.23,0.0,28.7,349.46,14.49,9
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1988,25.3,29.08,452.5,2363.3,4.75,0.46,8.41,0.99,0.0,29.2,351.11,15.36,19
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1989,25.55,28.74,457.7,2152.1,4.78,0.452,8.44,0.72,0.0,30.5,352.81,15.81,12
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1990,25.97,29.56,466.7,2095.8,4.79,0.456,8.31,0.44,0.0,31.2,354.57,16.49,8
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1991,25.81,29.4,463.0,2388.5,4.75,0.455,7.96,0.14,0.0,32.0,356.38,17.49,21
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1992,25.56,28.98,458.2,2113.0,4.79,0.447,7.97,-0.18,0.0,33.3,358.21,18.69,13
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1993,25.72,29.21,461.3,2110.9,4.79,0.437,7.94,-0.5,0.0,34.6,360.09,19.64,9
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1994,25.73,29.16,461.5,2238.0,4.77,0.438,7.81,-0.84,0.0,35.2,361.99,20.68,9
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1995,26.07,29.51,468.3,2150.1,4.79,0.429,7.66,-1.18,0.0,37.4,363.91,21.9,12
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1996,26.06,29.29,468.3,2183.5,4.78,0.427,7.65,-1.54,0.0,38.4,365.87,23.37,12
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1997,25.71,29.21,461.0,2097.4,4.79,0.431,7.44,-1.91,0.0,40.0,367.85,24.91,9
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1998,25.73,29.46,461.6,2404.9,4.75,0.421,7.35,-2.29,0.0,40.2,369.84,26.33,26
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,1999,25.85,29.59,464.3,2102.8,4.79,0.419,7.22,-2.67,0.0,41.0,371.87,27.94,12
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2000,26.17,29.66,470.7,2142.5,4.79,0.408,7.18,-3.07,0.0,43.9,373.9,29.46,11
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2001,25.91,29.4,465.5,2225.3,4.77,0.402,6.87,-3.47,0.0,44.6,375.96,31.18,11
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2002,26.05,29.6,468.5,2181.1,4.78,0.399,6.87,-3.88,0.0,46.0,378.04,33.14,12
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2003,26.04,29.73,467.7,2153.4,4.78,0.394,6.97,-4.3,0.0,47.4,380.13,34.91,10
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2004,26.06,29.55,468.7,2293.4,4.76,0.386,6.73,-4.73,0.0,48.6,382.24,36.75,8
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2005,26.15,29.38,470.8,2252.8,4.77,0.378,6.48,-5.17,0.0,50.4,384.36,38.84,12
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2006,26.37,29.7,475.4,2205.1,4.78,0.379,6.32,-5.61,0.0,52.0,386.5,40.82,13
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2007,26.4,29.94,476.0,2541.9,4.73,0.366,6.25,-6.06,0.0,52.7,388.66,42.98,25
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2008,26.43,30.0,476.9,2262.4,4.77,0.362,6.23,-6.51,0.0,54.7,390.82,45.09,10
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2009,26.42,30.1,476.4,2644.9,4.71,0.358,5.88,-6.97,0.0,56.6,393.0,47.3,21
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2010,26.6,30.08,480.8,2379.6,4.75,0.351,5.82,-7.44,0.0,57.6,395.2,49.71,20
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2011,26.74,29.99,483.5,2325.1,4.76,0.348,5.55,-7.92,0.0,60.1,397.4,52.04,20
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2012,26.46,29.59,476.6,2250.2,4.77,0.339,5.54,-8.4,0.0,61.2,399.62,54.46,19
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2013,26.51,30.22,478.3,2386.6,4.75,0.337,5.29,-8.89,0.0,62.3,401.85,57.13,18
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2014,26.76,30.36,484.4,2388.3,4.75,0.327,5.22,-9.38,0.0,65.4,404.09,59.56,25
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2015,26.96,30.59,489.1,2433.0,4.74,0.324,5.07,-9.88,0.0,67.5,406.35,62.24,20
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2016,26.71,30.16,482.6,2314.7,4.76,0.311,4.96,-10.39,0.0,68.6,408.61,65.03,17
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2017,27.21,30.81,494.6,2582.3,4.72,0.311,4.76,-10.9,0.0,70.0,410.89,67.76,28
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2018,26.63,30.06,481.0,2576.2,4.72,0.303,4.46,-11.42,0.0,72.0,413.17,70.42,16
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2019,27.32,30.55,496.8,2329.2,4.76,0.298,4.61,-11.94,0.0,73.4,415.47,73.22,26
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2020,27.1,30.56,491.7,2725.3,4.7,0.288,4.29,-12.47,0.0,74.7,417.78,75.94,38
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2021,27.03,30.63,490.4,2291.5,4.76,0.282,4.25,-13.01,0.0,75.5,420.09,79.05,19
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2022,27.15,30.73,493.0,2810.0,4.69,0.279,3.9,-13.54,0.0,76.0,422.42,81.79,39
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2023,26.99,30.56,489.3,2689.1,4.7,0.27,3.8,-14.09,0.0,76.8,424.75,85.23,33
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2024,27.38,30.77,498.0,2724.3,4.7,0.263,3.7,-14.64,0.0,77.2,427.1,88.2,39
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2025,27.4,30.7,498.0,2748.6,4.7,0.248,3.49,-15.2,0.0,78.0,429.45,91.47,36
+dhaka,Dhaka (Central Megacity & Urban Heat Island),Metropolitan / Central,23.8103,90.4125,2026,27.54,31.07,502.0,2658.8,4.71,0.238,3.32,-15.76,0.0,79.8,431.81,94.32,44
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1985,25.28,28.21,450.1,3223.0,4.62,0.617,14.92,2.24,7.1,21.7,345.81,9.77,28
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1986,25.64,28.48,457.3,2904.9,4.67,0.618,15.04,2.15,9.0,21.5,347.16,9.95,26
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1987,25.5,28.57,454.8,3015.7,4.65,0.62,14.96,2.04,11.2,21.6,348.67,10.47,15
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1988,25.6,28.17,456.1,3277.0,4.62,0.611,14.64,1.93,13.6,22.7,350.27,10.57,30
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1989,25.6,28.6,456.6,2973.7,4.66,0.616,14.83,1.8,16.3,23.8,351.92,11.34,24
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1990,25.52,28.48,454.7,3044.5,4.65,0.613,14.67,1.67,19.3,24.8,353.63,12.1,26
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1991,25.36,28.48,451.1,3385.7,4.6,0.614,14.65,1.52,22.8,25.0,355.38,12.79,45
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1992,25.64,28.43,457.4,3104.5,4.64,0.609,14.48,1.37,26.8,27.5,357.16,13.43,23
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1993,25.84,28.73,461.6,2944.2,4.67,0.608,14.36,1.22,30.8,27.7,358.97,14.36,20
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1994,25.82,28.76,461.2,3190.4,4.63,0.604,14.29,1.06,34.9,28.7,360.81,15.3,26
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1995,25.75,28.5,459.7,3160.9,4.63,0.602,14.24,0.89,39.1,29.5,362.69,16.2,23
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1996,26.05,29.09,466.2,3203.7,4.63,0.596,14.11,0.72,43.3,29.9,364.58,17.34,20
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1997,25.81,29.02,461.1,3129.2,4.64,0.594,13.76,0.55,47.6,31.9,366.5,18.62,22
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1998,25.55,28.25,455.4,3364.1,4.6,0.593,13.69,0.37,51.9,33.1,368.43,19.77,39
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,1999,26.14,28.86,468.2,3302.9,4.61,0.589,13.65,0.18,56.3,33.5,370.39,20.83,30
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2000,25.74,29.25,459.6,3111.8,4.64,0.584,13.46,-0.01,60.8,33.7,372.37,22.24,20
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2001,25.81,28.43,461.2,3103.1,4.64,0.579,13.49,-0.2,65.3,36.0,374.36,23.7,21
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2002,25.92,28.62,463.1,3093.7,4.64,0.577,13.53,-0.39,69.9,36.3,376.38,25.43,29
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2003,25.91,29.08,463.3,3037.4,4.65,0.576,13.24,-0.59,74.5,38.9,378.41,27.0,26
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2004,25.96,29.09,464.6,3160.7,4.63,0.574,13.17,-0.8,79.2,39.1,380.45,28.34,30
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2005,26.03,28.92,465.6,3282.3,4.61,0.568,12.91,-1.01,84.0,41.3,382.51,30.13,25
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2006,26.22,29.29,469.6,3326.7,4.61,0.571,12.91,-1.22,88.8,41.6,384.58,31.77,29
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2007,25.98,28.56,464.2,3537.6,4.57,0.565,12.77,-1.43,93.7,42.9,386.67,33.41,49
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2008,26.2,28.99,469.3,3393.8,4.6,0.56,12.55,-1.65,98.7,44.0,388.77,35.15,27
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2009,26.28,29.24,471.3,3502.1,4.58,0.555,12.44,-1.87,103.7,44.9,390.88,37.32,45
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2010,26.42,29.56,474.1,3287.8,4.61,0.554,12.43,-2.09,108.8,46.8,393.01,39.19,24
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2011,26.23,29.26,470.3,3206.0,4.63,0.545,12.23,-2.32,113.9,48.2,395.15,41.08,30
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2012,26.37,29.34,473.0,3314.3,4.61,0.545,11.82,-2.55,119.1,49.8,397.3,43.15,28
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2013,26.51,29.6,476.0,3258.1,4.62,0.545,11.74,-2.78,124.4,51.0,399.46,45.18,29
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2014,26.32,29.19,471.7,3301.2,4.61,0.54,11.72,-3.02,129.7,52.3,401.64,47.18,27
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2015,26.59,29.36,477.8,3269.0,4.62,0.538,11.5,-3.26,135.1,53.9,403.82,49.04,37
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2016,26.48,29.56,475.5,3633.0,4.56,0.531,11.35,-3.5,140.5,55.4,406.02,51.44,30
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2017,26.78,29.66,482.2,3590.4,4.57,0.525,11.37,-3.74,146.0,56.2,408.22,53.92,48
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2018,26.4,29.27,473.7,3450.0,4.59,0.52,11.05,-3.99,151.6,58.1,410.44,56.16,30
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2019,26.84,29.58,483.6,3501.5,4.58,0.518,10.87,-4.24,157.2,60.0,412.67,58.56,31
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2020,26.75,29.33,481.4,3828.5,4.53,0.519,10.87,-4.49,162.9,60.5,414.9,60.85,52
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2021,26.83,30.13,483.0,3407.5,4.59,0.514,10.76,-4.74,168.6,62.1,417.15,63.45,34
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2022,26.79,29.64,482.2,3838.3,4.53,0.502,10.58,-5.0,174.5,65.7,419.4,65.83,54
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2023,26.99,30.23,487.1,3644.9,4.56,0.503,10.23,-5.26,180.3,65.4,421.67,68.28,52
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2024,27.05,29.8,488.1,3756.5,4.54,0.505,10.09,-5.52,186.3,66.6,423.94,71.04,57
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2025,27.23,30.06,492.0,3560.8,4.57,0.496,9.91,-5.79,192.3,68.1,426.22,73.67,48
+chittagong,"Chittagong / Chattogram (Port, Hills & Industrial Coast)",Metropolitan / Coastal Port,22.3569,91.8123,2026,27.03,29.72,487.5,3901.1,4.52,0.489,9.71,-6.06,198.3,69.6,428.51,76.22,53
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1985,24.09,27.96,427.6,4322.3,4.46,0.697,13.77,4.54,0.0,17.6,344.91,5.46,40
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1986,24.15,27.82,428.4,4055.6,4.5,0.693,13.68,4.46,0.0,17.8,346.22,5.59,30
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1987,24.31,28.16,431.8,4269.0,4.47,0.693,13.71,4.37,0.0,17.9,347.69,5.74,31
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1988,24.24,27.9,430.4,4296.5,4.46,0.699,13.54,4.26,0.0,18.8,349.24,5.91,58
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1989,24.52,28.08,435.4,4109.9,4.49,0.69,13.58,4.15,0.0,20.9,350.84,6.29,32
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1990,24.38,28.05,433.3,4075.5,4.5,0.693,13.63,4.03,0.0,20.1,352.5,6.67,34
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1991,24.31,28.04,431.9,4531.0,4.43,0.689,13.34,3.91,0.0,20.6,354.2,7.21,66
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1992,24.54,28.13,436.4,4278.2,4.46,0.687,13.23,3.78,0.0,21.1,355.93,7.63,36
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1993,24.46,28.02,434.6,4292.7,4.46,0.691,13.34,3.64,0.0,22.3,357.69,8.34,36
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1994,24.08,27.69,427.2,4215.5,4.47,0.681,13.13,3.5,0.0,23.2,359.48,8.95,37
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1995,24.55,28.18,436.7,4210.2,4.48,0.682,13.23,3.35,0.0,21.9,361.3,9.65,31
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1996,24.48,28.29,435.2,4373.1,4.45,0.686,13.14,3.21,0.0,23.4,363.13,10.25,36
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1997,24.68,28.53,439.3,4352.6,4.45,0.679,13.14,3.05,0.0,25.2,364.99,11.1,39
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1998,24.45,28.03,434.5,4440.9,4.44,0.673,13.05,2.89,0.0,24.4,366.88,11.71,64
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,1999,24.61,28.56,438.0,4336.2,4.46,0.669,12.88,2.73,0.0,26.6,368.78,12.72,39
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2000,24.64,28.31,438.3,4329.1,4.46,0.674,12.92,2.56,0.0,25.9,370.7,13.4,36
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2001,24.85,28.62,442.6,4359.4,4.45,0.666,12.84,2.4,0.0,27.4,372.63,14.55,42
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2002,24.86,28.48,442.6,4311.8,4.46,0.662,12.63,2.22,0.0,28.1,374.59,15.64,37
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2003,25.07,28.83,447.2,4276.9,4.47,0.664,12.59,2.05,0.0,28.6,376.56,16.76,41
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2004,24.78,28.54,441.1,4236.7,4.47,0.661,12.41,1.87,0.0,29.2,378.54,17.5,42
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2005,24.87,28.77,443.1,4319.3,4.46,0.66,12.46,1.69,0.0,29.9,380.54,18.5,41
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2006,24.96,29.29,445.4,4354.7,4.45,0.658,12.42,1.5,0.0,32.2,382.56,19.53,44
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2007,24.8,28.51,441.6,4578.2,4.42,0.653,12.23,1.31,0.0,32.7,384.58,20.84,79
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2008,24.91,28.61,443.5,4385.2,4.45,0.649,12.11,1.12,0.0,33.7,386.62,22.05,43
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2009,24.95,28.64,444.9,4854.3,4.38,0.655,12.04,0.93,0.0,33.5,388.68,23.24,66
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2010,25.18,28.85,449.6,4566.7,4.42,0.646,11.99,0.73,0.0,34.1,390.74,24.48,40
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2011,25.15,28.67,448.8,4490.9,4.43,0.644,11.82,0.53,0.0,35.6,392.82,25.5,44
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2012,24.79,28.34,441.0,4641.4,4.41,0.642,11.88,0.33,0.0,36.0,394.91,26.96,44
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2013,25.24,29.1,450.7,4739.0,4.4,0.641,11.63,0.12,0.0,37.2,397.01,28.23,41
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2014,25.47,29.21,455.2,4907.4,4.37,0.635,11.58,-0.08,0.0,37.8,399.12,29.84,45
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2015,25.09,29.18,447.6,4419.6,4.44,0.633,11.4,-0.29,0.0,37.9,401.24,31.05,42
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2016,25.56,29.39,457.3,4501.8,4.43,0.629,11.4,-0.51,0.0,40.2,403.37,32.68,54
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2017,25.41,28.99,454.4,4975.6,4.36,0.629,11.26,-0.72,0.0,40.3,405.51,34.19,81
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2018,25.36,29.04,453.1,4509.8,4.43,0.623,11.25,-0.94,0.0,41.0,407.67,35.26,55
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2019,25.54,29.34,457.1,4764.9,4.39,0.622,11.13,-1.16,0.0,42.7,409.83,36.79,55
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2020,25.52,28.95,456.6,4804.4,4.39,0.621,11.16,-1.38,0.0,43.1,412.0,38.63,95
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2021,25.9,29.91,465.0,4685.9,4.41,0.618,10.87,-1.6,0.0,44.2,414.18,40.12,54
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2022,25.55,29.07,457.1,5246.3,4.32,0.612,10.83,-1.83,0.0,46.1,416.37,41.81,105
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2023,25.66,29.27,459.6,5004.4,4.36,0.607,10.71,-2.06,0.0,46.7,418.57,43.49,87
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2024,25.95,29.58,465.7,5140.1,4.34,0.607,10.53,-2.29,0.0,47.7,420.77,45.14,104
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2025,25.86,29.48,463.8,5321.7,4.31,0.605,10.48,-2.52,0.0,48.1,422.99,46.81,91
+sylhet,"Sylhet (Haor Wetlands, Tea Gardens & Flash-Flood Basin)",Northeast / High-Rainfall & Flash-Flood Zone,24.8949,91.8687,2026,25.66,29.52,459.7,5221.4,4.32,0.603,10.47,-2.76,0.0,50.2,425.21,48.43,100
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1985,25.74,29.26,461.3,2206.8,4.78,0.796,18.36,3.04,7.1,16.1,344.21,1.32,17
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1986,25.88,29.52,463.9,2071.6,4.8,0.787,18.35,2.96,9.6,14.7,345.51,1.38,12
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1987,25.99,29.57,466.1,2155.9,4.78,0.791,18.38,2.86,12.5,16.5,346.96,1.32,17
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1988,26.27,30.07,472.2,2431.1,4.74,0.783,18.18,2.75,15.8,16.3,348.5,1.25,23
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1989,25.86,29.4,463.3,2158.6,4.78,0.786,18.2,2.63,19.6,16.2,350.09,1.53,10
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1990,26.01,29.86,467.1,2137.7,4.79,0.778,18.03,2.51,24.2,17.2,351.73,1.7,8
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1991,26.26,30.41,472.2,2528.6,4.73,0.777,18.05,2.37,29.3,18.0,353.42,1.51,34
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1992,25.92,29.52,465.2,2109.2,4.79,0.775,18.01,2.24,34.4,18.5,355.13,1.83,15
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1993,26.02,29.39,466.9,2174.0,4.78,0.772,17.88,2.09,39.5,17.4,356.88,1.62,12
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1994,26.21,29.73,470.8,2265.8,4.77,0.77,17.72,1.94,44.8,20.0,358.65,1.65,17
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1995,26.23,29.87,471.2,2176.4,4.78,0.768,17.75,1.79,50.2,20.4,360.45,2.0,21
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1996,26.03,29.65,466.8,2292.4,4.76,0.766,17.62,1.63,55.6,20.1,362.28,2.04,16
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1997,26.37,30.14,474.8,2280.5,4.77,0.763,17.51,1.47,61.1,20.9,364.12,2.24,24
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1998,26.47,30.28,477.0,2490.2,4.74,0.759,17.56,1.3,66.6,21.1,365.99,2.45,31
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,1999,26.35,29.77,473.6,2253.5,4.77,0.758,17.34,1.13,72.3,21.9,367.87,2.61,15
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2000,26.51,30.14,477.4,2262.5,4.77,0.755,17.33,0.96,78.0,23.0,369.77,2.64,19
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2001,26.2,29.84,471.2,2266.8,4.77,0.75,17.2,0.78,83.9,23.1,371.69,2.99,21
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2002,26.43,30.18,475.7,2405.0,4.75,0.751,17.16,0.59,89.7,24.0,373.63,3.24,25
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2003,26.51,30.06,477.8,2171.5,4.78,0.741,16.83,0.41,95.7,24.6,375.58,3.29,22
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2004,26.66,30.27,481.1,2371.5,4.75,0.745,16.82,0.22,101.8,24.9,377.55,3.78,19
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2005,26.53,30.5,478.3,2242.5,4.77,0.744,16.58,0.03,107.9,25.7,379.53,3.71,22
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2006,26.55,30.12,478.3,2340.9,4.76,0.737,16.74,-0.17,114.1,26.8,381.53,3.83,25
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2007,26.41,29.96,475.6,2516.2,4.73,0.732,16.49,-0.37,120.4,27.2,383.54,4.27,39
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2008,26.7,30.37,481.3,2339.9,4.76,0.731,16.55,-0.57,126.8,29.0,385.56,4.33,20
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2009,26.77,30.53,483.6,2628.6,4.71,0.721,16.38,-0.77,133.2,28.2,387.6,4.64,35
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2010,26.56,29.93,478.5,2421.7,4.74,0.717,16.23,-0.98,139.7,28.7,389.64,4.82,20
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2011,26.93,30.87,487.1,2339.8,4.76,0.714,16.09,-1.19,146.4,28.9,391.7,5.06,22
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2012,27.03,30.68,489.1,2324.7,4.76,0.715,16.11,-1.4,153.0,30.9,393.77,5.24,22
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2013,27.14,30.92,491.8,2389.2,4.75,0.713,15.9,-1.62,159.8,31.6,395.85,5.65,22
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2014,27.12,31.01,491.5,2398.9,4.75,0.708,15.73,-1.84,166.6,31.4,397.95,5.77,21
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2015,26.89,30.54,486.5,2549.0,4.72,0.696,15.62,-2.06,173.6,32.6,400.05,6.24,25
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2016,27.21,31.22,493.4,2446.8,4.74,0.699,15.59,-2.28,180.6,33.0,402.16,6.11,25
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2017,27.2,31.27,493.2,2594.1,4.72,0.695,15.37,-2.51,187.6,34.3,404.28,6.79,37
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2018,27.35,30.77,496.2,2521.9,4.73,0.688,15.38,-2.74,194.8,34.5,406.42,7.12,25
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2019,27.06,30.82,489.8,2500.0,4.73,0.687,15.13,-2.97,202.0,36.1,408.56,7.27,21
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2020,27.17,31.05,492.2,2752.3,4.69,0.682,15.11,-3.2,209.4,35.9,410.71,7.54,36
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2021,27.26,31.13,494.7,2445.2,4.74,0.678,14.95,-3.44,216.7,36.5,412.88,7.84,22
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2022,27.41,31.13,498.0,2736.0,4.7,0.679,14.93,-3.68,224.2,39.3,415.05,8.12,44
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2023,27.42,31.31,498.5,2700.7,4.7,0.671,14.71,-3.92,231.8,38.1,417.22,8.33,40
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2024,27.8,31.53,507.1,2689.4,4.7,0.669,14.5,-4.16,239.4,40.7,419.41,8.71,45
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2025,27.38,30.97,496.6,2675.7,4.71,0.663,14.42,-4.41,247.1,40.5,421.61,9.13,34
+sundarbans,Sundarbans (World's Largest Mangrove Forest & Delta),Coastal / Mangrove Biodiversity Hotspot,21.9497,89.1833,2026,27.55,31.27,501.3,2786.3,4.69,0.656,14.31,-4.66,254.9,41.3,423.81,9.54,43
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1985,25.61,28.82,455.9,3722.9,4.55,0.662,15.47,2.64,7.1,17.9,344.61,3.6,21
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1986,25.62,28.67,455.9,3730.6,4.55,0.662,15.56,2.54,9.2,16.7,345.93,3.64,18
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1987,25.84,28.84,460.9,3668.8,4.56,0.662,15.63,2.43,11.5,18.5,347.41,3.81,20
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1988,25.62,28.26,456.0,3766.1,4.54,0.652,15.33,2.3,14.2,17.9,348.97,4.22,28
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1989,25.69,28.89,457.9,3481.2,4.59,0.646,15.31,2.16,17.0,18.8,350.6,4.66,20
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1990,25.92,28.53,462.6,3552.2,4.57,0.648,15.16,2.01,20.4,19.2,352.27,4.97,21
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1991,25.5,28.04,453.7,4073.9,4.5,0.643,15.01,1.85,24.4,19.9,353.98,5.62,34
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1992,26.11,29.23,466.6,3849.3,4.53,0.647,14.92,1.69,28.7,21.3,355.72,6.3,18
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1993,25.9,28.82,462.0,3573.5,4.57,0.639,14.8,1.52,33.0,22.1,357.5,6.75,21
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1994,25.93,29.09,463.2,3665.2,4.56,0.631,14.73,1.34,37.4,22.1,359.31,7.41,27
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1995,25.92,29.13,462.7,3670.5,4.55,0.63,14.48,1.16,41.8,22.6,361.14,8.38,22
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1996,25.72,28.86,458.5,3902.4,4.52,0.621,14.48,0.98,46.4,23.6,362.99,9.2,18
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1997,25.93,29.19,463.4,3618.4,4.56,0.62,14.21,0.78,50.9,24.2,364.87,9.77,22
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1998,26.13,29.39,467.2,3974.6,4.51,0.62,14.35,0.59,55.6,25.1,366.77,10.74,38
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,1999,25.97,28.7,463.6,3697.7,4.55,0.615,13.94,0.38,60.3,25.7,368.69,11.98,21
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2000,25.81,28.75,460.2,3752.4,4.55,0.608,13.83,0.18,65.1,27.2,370.62,13.08,26
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2001,26.33,29.33,471.7,3726.5,4.55,0.604,13.73,-0.03,69.9,27.1,372.58,13.99,24
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2002,26.05,28.74,465.1,3769.9,4.54,0.602,13.59,-0.25,74.8,27.3,374.55,15.14,20
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2003,26.45,29.41,474.3,3742.0,4.55,0.592,13.43,-0.47,79.8,29.7,376.53,16.19,23
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2004,25.99,28.98,464.6,3733.5,4.55,0.594,12.99,-0.69,84.9,29.3,378.54,17.42,25
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2005,26.38,29.25,472.6,3982.0,4.51,0.587,13.0,-0.92,90.0,30.7,380.55,18.37,21
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2006,26.33,29.49,471.6,4059.5,4.5,0.58,12.96,-1.15,95.1,32.1,382.59,19.89,23
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2007,26.75,29.75,480.6,4396.7,4.45,0.577,12.81,-1.38,100.4,32.4,384.63,21.23,48
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2008,26.36,29.78,472.2,3984.6,4.51,0.575,12.37,-1.62,105.7,33.5,386.69,22.56,23
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2009,26.43,29.17,473.6,4374.1,4.45,0.571,12.46,-1.86,111.1,34.3,388.76,23.81,38
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2010,26.4,29.33,472.9,3743.0,4.55,0.566,12.24,-2.11,116.5,35.1,390.84,25.13,23
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2011,26.86,29.32,482.8,3910.0,4.52,0.56,11.99,-2.36,122.0,36.2,392.94,26.75,31
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2012,26.76,29.63,480.8,4076.7,4.5,0.556,11.83,-2.61,127.6,37.2,395.04,28.13,31
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2013,26.67,29.71,479.0,3926.0,4.52,0.547,11.75,-2.87,133.2,37.9,397.16,29.84,22
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2014,26.65,29.31,478.5,3815.9,4.54,0.546,11.55,-3.12,138.9,38.7,399.29,31.53,23
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2015,26.7,29.81,479.9,4198.1,4.48,0.538,11.38,-3.38,144.7,40.2,401.43,32.96,33
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2016,26.74,29.9,480.6,4118.1,4.49,0.527,11.08,-3.65,150.5,41.6,403.58,34.61,23
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2017,26.7,29.51,479.8,4328.2,4.46,0.528,10.96,-3.92,156.4,42.8,405.74,36.39,38
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2018,27.02,29.94,486.7,4023.6,4.5,0.509,10.73,-4.19,162.4,44.5,407.91,38.02,26
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2019,26.94,29.81,485.0,4194.8,4.48,0.509,10.55,-4.46,168.4,44.7,410.09,39.69,26
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2020,26.67,29.56,478.8,4364.0,4.45,0.512,10.34,-4.74,174.5,45.7,412.28,41.38,47
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2021,26.84,29.91,482.7,4218.5,4.47,0.502,10.01,-5.02,180.7,46.8,414.48,43.3,32
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2022,27.25,30.35,492.0,4889.7,4.37,0.496,10.1,-5.3,186.9,46.9,416.69,44.88,51
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2023,26.73,29.51,480.3,4780.0,4.39,0.491,9.63,-5.59,193.2,49.2,418.91,46.85,45
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2024,27.3,30.39,493.3,4598.1,4.42,0.481,9.49,-5.87,199.6,50.0,421.13,49.08,53
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2025,27.23,30.45,491.7,4379.9,4.45,0.48,9.4,-6.16,206.0,51.3,423.37,50.73,36
+coxs_bazar,Cox's Bazar (Southeastern Shoreline & Coastal Hills),Coastal / Southeastern Shoreline,21.4272,91.97,2026,27.08,29.92,488.0,4877.5,4.38,0.471,8.95,-6.46,212.5,53.2,425.61,52.93,51
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1985,25.95,28.58,463.0,3735.6,4.55,0.537,9.28,1.54,7.1,14.0,344.01,0.72,13
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1986,26.11,28.86,466.6,3519.2,4.58,0.531,9.28,1.45,9.5,14.0,345.3,0.57,8
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1987,25.75,28.77,459.3,3496.8,4.58,0.534,9.41,1.34,12.2,14.1,346.76,0.88,7
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1988,25.91,28.59,462.6,3941.2,4.51,0.529,9.27,1.23,15.2,13.7,348.29,0.68,20
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1989,25.9,29.12,462.1,3430.4,4.59,0.529,9.17,1.1,18.7,14.8,349.88,1.02,13
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1990,25.76,28.52,458.9,3585.8,4.57,0.523,9.08,0.96,22.9,15.0,351.52,1.29,11
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1991,26.16,29.0,467.5,4048.0,4.5,0.516,9.03,0.82,27.7,16.0,353.19,1.21,21
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1992,25.55,28.12,454.1,3738.2,4.55,0.521,8.95,0.67,32.5,15.4,354.9,1.43,10
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1993,26.26,28.99,469.4,3632.7,4.56,0.516,8.84,0.52,37.4,15.5,356.65,1.81,9
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1994,25.84,28.59,460.9,3696.9,4.55,0.513,8.8,0.36,42.3,17.1,358.42,2.08,9
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1995,26.11,29.26,466.5,3450.9,4.59,0.509,8.67,0.19,47.4,17.6,360.21,2.18,15
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1996,26.04,28.46,465.0,3604.8,4.57,0.503,8.57,0.02,52.5,18.5,362.03,2.82,7
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1997,25.98,28.82,463.9,3787.8,4.54,0.507,8.43,-0.16,57.7,18.2,363.87,2.81,10
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1998,26.14,29.02,467.2,4303.7,4.46,0.495,8.37,-0.33,63.0,19.0,365.73,3.23,18
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,1999,26.3,28.93,470.5,3898.8,4.52,0.493,8.44,-0.52,68.3,19.8,367.61,3.84,10
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2000,26.33,28.8,471.0,3733.0,4.55,0.488,8.16,-0.71,73.7,19.6,369.51,4.02,12
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2001,26.43,28.9,473.1,3733.9,4.55,0.488,8.02,-0.9,79.2,21.0,371.42,4.6,13
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2002,26.53,29.12,475.7,3673.6,4.56,0.478,8.0,-1.09,84.8,20.2,373.36,4.61,12
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2003,26.48,28.97,474.4,3921.0,4.52,0.481,7.88,-1.3,90.4,21.0,375.3,5.35,13
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2004,26.44,29.17,473.7,3770.6,4.54,0.47,7.67,-1.5,96.1,22.3,377.27,5.53,15
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2005,26.49,29.41,474.4,3576.1,4.57,0.468,7.65,-1.71,101.9,23.1,379.24,6.08,16
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2006,26.3,28.92,470.4,4006.7,4.5,0.463,7.7,-1.92,107.8,23.1,381.24,6.5,10
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2007,26.28,29.03,470.3,4281.4,4.47,0.462,7.73,-2.13,113.7,23.2,383.24,6.92,26
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2008,26.1,28.84,466.0,3934.6,4.52,0.457,7.32,-2.35,119.7,24.1,385.26,7.61,8
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2009,26.49,28.9,474.8,4047.8,4.5,0.45,7.25,-2.57,125.8,25.1,387.29,7.91,20
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2010,26.78,29.47,481.5,3779.4,4.54,0.447,7.17,-2.79,132.0,26.1,389.33,8.5,18
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2011,26.75,29.52,480.6,3987.1,4.51,0.443,7.09,-3.02,138.2,27.1,391.38,9.08,17
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2012,26.45,29.69,473.7,3671.9,4.56,0.438,6.95,-3.25,144.5,27.3,393.45,9.46,21
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2013,26.67,29.96,478.9,3893.9,4.52,0.433,6.67,-3.48,150.9,27.7,395.52,10.13,22
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2014,26.76,29.38,481.0,3906.0,4.52,0.428,6.58,-3.72,157.4,29.1,397.61,10.56,23
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2015,27.12,30.25,488.6,3977.4,4.51,0.426,6.32,-3.95,163.9,29.2,399.71,11.33,21
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2016,26.67,29.81,478.5,3853.4,4.53,0.42,6.4,-4.2,170.5,29.6,401.82,12.08,20
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2017,27.03,29.74,486.8,4334.0,4.46,0.41,6.27,-4.44,177.2,29.8,403.94,12.27,33
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2018,26.75,29.6,480.6,4238.5,4.47,0.402,6.01,-4.69,184.0,30.8,406.06,13.23,27
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2019,26.85,29.68,483.0,4229.2,4.47,0.404,5.96,-4.94,190.8,31.2,408.2,13.65,22
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2020,26.85,30.02,482.8,4488.0,4.43,0.399,5.74,-5.19,197.7,32.9,410.35,14.37,36
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2021,27.03,30.06,487.0,4148.7,4.49,0.396,5.68,-5.44,204.7,33.1,412.5,14.78,21
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2022,27.04,29.81,487.0,4474.2,4.44,0.385,5.38,-5.7,211.8,33.6,414.67,15.79,37
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2023,27.08,29.44,488.0,4304.1,4.46,0.381,5.45,-5.96,218.9,34.6,416.84,16.43,33
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2024,27.4,29.88,495.2,4540.8,4.43,0.373,5.25,-6.22,226.1,35.1,419.02,16.89,42
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2025,27.22,29.84,491.0,4411.2,4.45,0.371,5.14,-6.49,233.4,36.1,421.21,17.77,35
+kutubdia_saint_martin,Kutubdia & Saint Martin's Offshore Islands,Offshore Coastal & Coral Islands / Bay of Bengal,21.2201,92.0907,2026,27.13,30.17,488.9,4269.1,4.47,0.365,5.14,-6.76,240.8,37.1,423.41,18.46,35

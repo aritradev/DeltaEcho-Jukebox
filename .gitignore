@@ -1,7 +1,63 @@
+# Dependencies & logs
+
 node_modules/
+
 *.log
+
+
+
+# OS & Editor metadata
+
 Thumbs.db
+
 Desktop.ini
+
 .DS_Store
+
+.vscode/
+
+.idea/
+
+*.swp
+
+*~
+
+
+
+# Environment & secrets
+
 .env
+
 .env.*
+
+
+
+# Scratch planning notes, superseded proposals & duplicate exports
+
+Some Other Resource/
+
+
+
+# Superseded draft datasets (not used by src/ or tools/build-regions.mjs)
+
+assets/data/bangladesh_7_regions_dataset_overview.md
+
+assets/data/bangladesh_7_regions_jukebox_dataset.json
+
+
+
+# Unused duplicate root-level images (active textures live in assets/textures/)
+
+assets/Asia_satellite.jpg
+
+assets/cox's-bazar.png
+
+assets/cox's-bazar1.png
+
+
+
+# Local archives
+
+*.zip
+
+

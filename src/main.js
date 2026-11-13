@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { gsap } from '../vendor/gsap/index.js';
-import { RENDER, SUN, EARTH, STATES, TIMELINE } from './config.js';
+import { RENDER, SUN, EARTH, STATES, TIMELINE, ATLAS } from './config.js';
 import { clamp, smoothstep, DEG } from './utils.js';
 import { AssetLoader } from './assets.js';
 import { Starfield } from './starfield.js';
@@ -9,12 +9,28 @@ import { Earth } from './earth.js';
 import { RegionMarker } from './region.js';
 import { Atlas, makeRegionPlate } from './atlas.js';
 import { REGION_BY_ID } from './regions.js';
+import { REGION_IMAGERY } from './region-imagery.js';
 import { CloudPass } from './cloud-pass.js';
 import { CameraDirector } from './camera-director.js';
 import { ExplorerControls } from './controls.js';
 import { SpaceDive } from './space-dive.js';
 import { UI } from './ui.js';
 import { SignalAudio } from './signal-audio.js';
+
+const yieldToBrowser = () => new Promise((resolve) => requestAnimationFrame(() => window.setTimeout(resolve, 0)));
+
+const WARM_KEY = 'jukebox:warmed';
+
+// The inline script in index.html sets this class before first paint. Read it
+// here as well so a storage-blocked fallback still reports the warm state.
+function isWarmReturn() {
+  if (document.documentElement.classList.contains('is-warm-return')) return true;
+  try {
+    return sessionStorage.getItem(WARM_KEY) === '1';
+  } catch (error) {
+    return false;
+  }
+}
 
 const MODE = {
   SOLAR: 'solar',
@@ -26,6 +42,8 @@ const MODE = {
 class App {
   constructor() {
     this.canvas = document.getElementById('scene');
+    this.isWarmReturn = isWarmReturn();
+    if (this.isWarmReturn) document.documentElement.classList.add('is-warm-return');
     this.clock = new THREE.Clock();
     this.elapsed = 0;
     this.mode = MODE.SOLAR;
@@ -43,40 +61,95 @@ class App {
     this._projected = new THREE.Vector3();
     this._hit = new THREE.Vector3();
     this.audio = new SignalAudio();
+    this.selectionToken = 0;
+    this.pendingSelection = null;
+    this.warmedTextures = new WeakSet();
+    this.qualityRatio = Math.min(window.devicePixelRatio, window.matchMedia('(pointer: coarse)').matches ? RENDER.mobilePixelRatio : RENDER.maxPixelRatio);
+    this.qualitySamples = [];
+    this.qualityChangedAt = 0;
+    this.previousFrame = 0;
+    this.qualityCeiling = Math.min(window.devicePixelRatio, RENDER.maxPixelRatio);
   }
 
   async init() {
+    performance.mark('jukebox:start');
     this.ui = new UI({
       onSelect: (region) => this.onSelect(region),
       onBack: () => this.onBack(),
       onSkip: () => this.onSkip(),
       onSignalToggle: (key, on) => this.audio.setEnabled(key, on),
       onYearChange: (year) => this.audio.setYear(year),
-      onPlay: (year) => this.audio.setYear(year)
+      onPlay: (year) => this.audio.setYear(year),
+      onMuteChange: (muted) => this.audio.setMuted(muted),
+      onVolumeChange: (volume) => this.audio.setVolume(volume),
+      onToggleAudio: () => this.toggleDestinationAudio(),
+      onSwitchRegion: (region) => this.switchDestinationInAtlas(region),
+      onCancelSelection: () => this.cancelSelection(),
+      onRetrySelection: () => {
+        if (this.pendingSelection) this.selectDestination(this.pendingSelection.region, this.pendingSelection.fromHotspot);
+      }
     });
-
-    this.loaderEffect = new SpaceDive(document.getElementById('loader-scene'));
-    this.loaderEffect.start();
-
-    this.ui.setLoaderSub('Loading observatory imagery\u2026');
-    const loader = new AssetLoader((ratio) => this.ui.setProgress(ratio * 0.96));
-    this.textures = await loader.loadAll();
-    this.ui.setProgress(0.98);
-
-    this.buildRenderer();
-    this.buildScene();
-    this.buildWorld();
+    this.audio.onStateChange = (state) => this.ui.setAudioState(state);
+    this.ui.setAudioState(this.audio.state);
+    if (!this.isWarmReturn) {
+      this.loaderEffect = new SpaceDive(document.getElementById('loader-scene'));
+      this.loaderEffect.start();
+    }
+    this.assetLoader = new AssetLoader((ratio) => this.ui.setProgress(ratio * 0.6));
+    await this.prepareStage('imagery', 0, 'Loading observatory imagery\u2026', async () => {
+      this.textures = await this.assetLoader.loadCritical();
+    });
+    await this.prepareStage('surface', 0.61, 'Preparing Earth\u2026', () => this.assetLoader.buildRoughness());
+    await this.prepareStage('world', 0.66, 'Preparing the environment\u2026', async () => {
+      this.buildRenderer();
+      this.buildScene();
+      await this.buildWorld();
+    });
+    await this.prepareStage('graphics', 0.92, 'Preparing graphics\u2026', async () => {
+      // Compile programs now, but let the first render upload only the textures
+      // the opening frame uses. Eagerly uploading every texture delays the
+      // loader by about a second for work that is not needed yet.
+      await this.renderer.compileAsync(this.scene, this.camera);
+      await yieldToBrowser();
+      this.renderer.render(this.scene, this.camera);
+    });
     this.bindEvents();
     this.ui.setProgress(1);
-
-    // Compile shaders and upload textures while the loader still covers the
-    // scene, so the reveal does not inherit a first-frame stall.
-    this.renderer.compile(this.scene, this.camera);
-    this.renderer.render(this.scene, this.camera);
-
+    this.ui.setLoaderSub(this.assetLoader.warnings.length ? 'Ready \u00b7 some surface detail is unavailable' : 'Observatory ready');
+    performance.measure('jukebox:startup', 'jukebox:start');
     this.clock.start();
     this.onEnter();
     this.loop();
+  }
+
+  async prepareStage(name, progress, label, prepare) {
+    this.ui.setProgress(progress);
+    this.ui.setLoaderSub(label);
+    await yieldToBrowser();
+    const start = performance.now();
+    await prepare();
+    performance.measure(`jukebox:${name}`, { start });
+  }
+
+  async warmTextures() {
+    const textures = new Set(Object.values(this.textures));
+    this.scene.traverse((object) => {
+      const materials = object.material ? (Array.isArray(object.material) ? object.material : [object.material]) : [];
+      for (const material of materials) {
+        for (const value of Object.values(material)) if (value?.isTexture) textures.add(value);
+        for (const uniform of Object.values(material.uniforms || {})) if (uniform.value?.isTexture) textures.add(uniform.value);
+      }
+    });
+    let batchStart = performance.now();
+    for (const texture of textures) {
+      if (this.warmedTextures.has(texture)) continue;
+      this.renderer.initTexture(texture);
+      this.warmedTextures.add(texture);
+      if (performance.now() - batchStart > 8) {
+        await yieldToBrowser();
+        batchStart = performance.now();
+      }
+    }
   }
 
   buildRenderer() {
@@ -87,7 +160,7 @@ class App {
       alpha: false,
       stencil: false
     });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDER.maxPixelRatio));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.qualityRatio));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = RENDER.exposure;
@@ -105,14 +178,23 @@ class App {
     this.scene.add(this.camera);
   }
 
-  buildWorld() {
+  async buildWorld() {
     const pixelRatio = this.renderer.getPixelRatio();
 
-    this.starfield = new Starfield(pixelRatio, this.textures['smoke.png']);
+    // Nebula and cloud pixels are independent; generating them in parallel
+    // keeps both workers busy while the rest of the world is assembled.
+    const cloudPassPromise = CloudPass.create(this.camera);
+    cloudPassPromise.catch(() => {});
+
+    this.starfield = await Starfield.create(pixelRatio, this.textures['smoke.png']);
     this.scene.add(this.starfield.group);
+    this.ui.setProgress(0.76);
+    await yieldToBrowser();
 
     this.solar = new SolarSystem(this.textures, this.renderer);
     this.scene.add(this.solar.group);
+    this.ui.setProgress(0.8);
+    await yieldToBrowser();
 
     this.sunLight = new THREE.PointLight(0xfff3e2, SUN.lightIntensity, 0, 0);
     this.scene.add(this.sunLight);
@@ -134,7 +216,7 @@ class App {
     this.region.setPixelRatio(pixelRatio);
     this.earth.setRegionLocalDirection(this.region.localDirection);
     this.earth.refresh();
-    this.ui.setReadoutTarget(this.currentRegion);
+    this.ui.setActiveRegion(this.currentRegion);
 
     this.scene.updateMatrixWorld(true);
 
@@ -149,7 +231,10 @@ class App {
     this.atlas = new Atlas(this.camera, this.textures);
     this.camera.add(this.atlas.group);
 
-    this.cloudPass = new CloudPass(this.camera, this.textures);
+    this.ui.setProgress(0.84);
+    this.ui.setLoaderSub('Preparing cloud textures\u2026');
+    await yieldToBrowser();
+    this.cloudPass = await cloudPassPromise;
     this.camera.add(this.cloudPass.group);
 
     this.director.apply();
@@ -158,7 +243,9 @@ class App {
 
   bindEvents() {
     window.addEventListener('resize', () => this.onResize());
+    window.addEventListener('pageshow', (event) => this.onPageShow(event));
     this.canvas.addEventListener('pointermove', (event) => this.onPointerMove(event));
+    this.canvas.addEventListener('pointerdown', () => this.onCanvasPointerDown(), { passive: true });
     this.canvas.addEventListener('pointerenter', () => {
       this.pointerInside = true;
     });
@@ -173,36 +260,92 @@ class App {
   onResize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDER.maxPixelRatio));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.qualityRatio));
     this.renderer.setSize(width, height);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+    if (this.director) this.director.refreshWideFraming();
     const ratio = this.renderer.getPixelRatio();
     this.starfield.setPixelRatio(ratio);
     this.region.setPixelRatio(ratio);
   }
 
+  updateQuality(now) {
+    const gap = this.previousFrame ? now - this.previousFrame : 0;
+    this.previousFrame = now;
+    if (document.hidden || this.mode === MODE.FLYING || this.pendingSelection || gap > 1000 || now - this.qualityChangedAt < RENDER.qualityCooldownMs) {
+      this.qualitySamples.length = 0;
+      this.qualityWindowStart = now;
+      return;
+    }
+    if (gap <= 0) return;
+    this.qualitySamples.push(gap);
+    if (now - this.qualityWindowStart < RENDER.qualitySampleMs) return;
+    const sorted = this.qualitySamples.sort((a, b) => a - b);
+    const frameMs = sorted[Math.floor(sorted.length * 0.8)];
+    let next = this.qualityRatio;
+    if (frameMs > RENDER.slowFrameMs) {
+      next = Math.max(RENDER.minPixelRatio, this.qualityRatio - RENDER.qualityStep);
+      this.qualityCeiling = Math.min(this.qualityCeiling, next);
+    } else if (frameMs < RENDER.fastFrameMs) {
+      next = Math.min(this.qualityCeiling, this.qualityRatio + RENDER.qualityStep);
+    }
+    this.qualitySamples.length = 0;
+    this.qualityWindowStart = now;
+    if (next === this.qualityRatio) return;
+    this.qualityRatio = next;
+    this.qualityChangedAt = now;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, next));
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.starfield.setPixelRatio(this.renderer.getPixelRatio());
+    this.region.setPixelRatio(this.renderer.getPixelRatio());
+  }
+
   onEnter() {
     if (this.started) return;
     this.started = true;
-    if (this.loaderEffect) this.loaderEffect.boost(2.4);
-    const fade = this.ui.dismissLoader();
-    if (fade && fade.then) {
-      fade.then(() => {
-        if (this.loaderEffect) this.loaderEffect.stop();
-        this.ui.scheduleVeilNoise();
-      });
-    } else if (this.loaderEffect) {
-      this.loaderEffect.stop();
-      this.ui.scheduleVeilNoise();
+    try {
+      sessionStorage.setItem(WARM_KEY, '1');
+    } catch (error) {
+      // Storage can be unavailable in private modes; the page still works.
     }
+    this.qualityChangedAt = performance.now();
     this.ui.setPanelEnabled(true);
     this.controls.setEnabled(true);
-    this.director.introDolly(5.2);
+    if (this.isWarmReturn) {
+      // A return from the Lab is already warm: no dive, no loader fade, no
+      // intro dolly. Place the camera and reveal the HUD immediately.
+      this.ui.dismissLoaderInstant();
+      this.ui.scheduleVeilNoise();
+      this.assetLoader.loadAtlas().catch(() => {});
+      this.director.refreshWideFraming();
+      this.director.apply();
+    } else {
+      if (this.loaderEffect) this.loaderEffect.boost(2.4);
+      this.ui.dismissLoader(() => this.loaderEffect?.stop()).then(() => {
+        this.ui.scheduleVeilNoise();
+        this.assetLoader.loadAtlas().catch(() => {});
+      });
+      this.director.introDolly(5.2);
+    }
     this.ui.showHint('Select a place to listen', 6);
     window.setTimeout(() => {
       if (this.mode === MODE.SOLAR) this.ui.showHint('Or click Earth to move closer', 4.5);
     }, 8200);
+  }
+
+  // Back-forward cache restores the running scene without re-running init().
+  // Drop the frozen frame gap so the first restored frame does not jump.
+  onPageShow(event) {
+    if (!event.persisted) return;
+    this.isWarmReturn = true;
+    document.documentElement.classList.add('is-warm-return');
+    if (this.loaderEffect) {
+      this.loaderEffect.stop();
+      this.loaderEffect = null;
+    }
+    this.ui?.dismissLoaderInstant();
+    this.clock.getDelta();
   }
 
   // Moves the marker, the camera target and the flat-map plate to the chosen
@@ -213,8 +356,6 @@ class App {
     this.earth.setRegionLocalDirection(this.region.localDirection);
     this.earth.refresh();
     this.director.setRegion(region);
-    if (region.id === 'coxs_bazar') this.atlas.restoreRegionTexture();
-    else this.atlas.setRegionTexture(makeRegionPlate(region));
     this.ui.setReadoutTarget(region);
     this.ui.setActiveRegion(region);
   }
@@ -222,7 +363,10 @@ class App {
   // The AudioContext has to be created or resumed inside a user gesture, so it
   // is prepared on the selection click and only faded in once the flight lands.
   prepareAudio() {
-    this.audio.start().catch((error) => console.warn('Audio unavailable', error));
+    const token = this.selectionToken;
+    this.audio.start().then(() => {
+      if (token !== this.selectionToken && !this.pendingSelection && this.mode !== MODE.ATLAS) this.audio.suspend();
+    }).catch((error) => console.warn('Audio unavailable', error));
   }
 
   startDestinationAudio() {
@@ -231,24 +375,102 @@ class App {
     this.audio.setEnabledSet(this.ui.enabledSignals);
     this.audio
       .start()
-      .then(() => this.audio.fadeIn(1.8))
+      .then(() => {
+        if (this.mode === MODE.ATLAS) this.audio.fadeIn(1.8);
+        else this.audio.suspend();
+      })
       .catch((error) => console.warn('Audio unavailable', error));
   }
 
+  toggleDestinationAudio() {
+    if (this.mode !== MODE.ATLAS) return;
+    this.audio.togglePlay().catch((error) => console.warn('Audio unavailable', error));
+  }
+
+  // Switch destination from the signals view while the flat map stage is
+  // already open. The camera stays put; only the marker, plate, readout and
+  // audio target change.
+  async switchDestinationInAtlas(region) {
+    if (!region || this.mode !== MODE.ATLAS || !this.started) return;
+    if (this.currentRegion?.id === region.id) return;
+    const token = ++this.selectionToken;
+    try {
+      await this.assetLoader.loadAtlas(region.id);
+      if (token !== this.selectionToken || this.mode !== MODE.ATLAS) return;
+      const plateFile = REGION_IMAGERY[region.id]?.file;
+      const plateTexture = plateFile && this.textures[plateFile];
+      this.atlas.setRegionTexture(plateTexture || makeRegionPlate(region), { owned: !plateTexture });
+      this.applyRegion(region);
+      this.ui.showSignals(region);
+      this.audio.setDestination(region);
+      this.audio.setYear(this.ui.activeYear);
+      this.audio.setEnabledSet(this.ui.enabledSignals);
+      this.ui.showHint(`${region.name} \u00b7 adjust the sound layers`, 4.5);
+    } catch (error) {
+      console.warn('Destination imagery unavailable', error);
+    }
+  }
+
   onSelect(region) {
-    if (!this.started || this.mode === MODE.FLYING || !region) return;
-    this.returnMode = this.mode === MODE.EXPLORE ? MODE.EXPLORE : MODE.SOLAR;
+    this.selectDestination(region);
+  }
+
+  async selectDestination(region, fromHotspot = false) {
+    if (!this.started || this.mode === MODE.FLYING || this.mode === MODE.ATLAS || !region) return;
+    const token = ++this.selectionToken;
+    this.pendingSelection = { region, fromHotspot };
     this.prepareAudio();
+    this.ui.setMapStatus(region);
+    try {
+      await this.assetLoader.loadAtlas(region.id);
+      if (token !== this.selectionToken) return;
+      const asiaTexture = this.textures[ATLAS.levels.asia.map];
+      if (asiaTexture) this.atlas.setBaseTexture('asia', asiaTexture);
+      const plateFile = REGION_IMAGERY[region.id]?.file;
+      const plateTexture = plateFile && this.textures[plateFile];
+      this.atlas.setRegionTexture(plateTexture || makeRegionPlate(region), { owned: !plateTexture });
+      await this.warmTextures();
+      if (token !== this.selectionToken) return;
+      await this.renderer.compileAsync(this.scene, this.camera);
+      if (token !== this.selectionToken) return;
+    } catch (error) {
+      if (token !== this.selectionToken) return;
+      this.ui.setMapStatus(region, true);
+      console.warn('Destination imagery unavailable', error);
+      this.audio.suspend();
+      return;
+    }
+    this.pendingSelection = null;
+    this.ui.setMapStatus(null);
+    this.returnMode = this.mode === MODE.EXPLORE ? MODE.EXPLORE : MODE.SOLAR;
     this.applyRegion(region);
-    this.ui.showSelectionNote(region);
     this.ui.setPanelEnabled(false);
     this.mode = MODE.FLYING;
     this.hotspotArmed = false;
     this.region.setHover(0);
     this.ui.showSkip();
-    this.director.beginFlight(() => this.onFlightComplete());
-    const speed = TIMELINE.speed || 1;
-    window.setTimeout(() => this.ui.hidePanel(1.6 / speed), 1700 / speed);
+    if (fromHotspot) {
+      this.region.triggerPulse(1.4);
+      gsap.fromTo(this.director, { punch: 0 }, { punch: 1, duration: 0.5, ease: 'power2.out', yoyo: true, repeat: 1 });
+      this.ui.hideSelectionNote();
+      this.ui.hidePanel(1.1);
+      this.director.continueToRegion(() => this.onFlightComplete());
+    } else {
+      this.ui.showSelectionNote(region);
+      this.director.beginFlight(() => this.onFlightComplete());
+      const speed = TIMELINE.speed || 1;
+      this.ui.hidePanel(1.6 / speed, { delay: 600 / speed });
+    }
+  }
+
+  cancelSelection() {
+    if (!this.pendingSelection) return false;
+    this.selectionToken += 1;
+    this.pendingSelection = null;
+    this.ui.setMapStatus(null);
+    this.audio.fadeOut(0.1);
+    this.audio.suspend();
+    return true;
   }
 
   onFlightComplete() {
@@ -267,6 +489,7 @@ class App {
   }
 
   onBack() {
+    if (this.cancelSelection()) return;
     if (this.mode === MODE.FLYING) return;
     const returnToOrbit = this.mode === MODE.ATLAS && this.returnMode === MODE.EXPLORE;
     this.mode = MODE.FLYING;
@@ -278,6 +501,7 @@ class App {
     }, 1200);
     this.ui.hideDestination(0.8);
     this.ui.hideSelectionNote();
+    if (this.ui.isMobileSheet()) this.ui.hidePanel(0.6);
     this.ui.setPanelEnabled(false);
     this.ui.setAnchor(0, 0, false);
 
@@ -318,6 +542,7 @@ class App {
   }
 
   onUserIntent() {
+    this.cancelSelection();
     if (this.mode !== MODE.FLYING) return;
     if (!this.director.interrupt()) return;
     const near = this.director.rig.dist < 6;
@@ -358,11 +583,24 @@ class App {
   }
 
   onKey(event) {
-    if (!this.started || event.key !== 'Escape') return;
+    if (!this.started || event.key !== 'Escape' || event.defaultPrevented) return;
+    if (this.ui.handleEscape()) {
+      event.preventDefault();
+      return;
+    }
+    if (this.cancelSelection()) {
+      event.preventDefault();
+      return;
+    }
     // During an outbound flight, Escape does what the Skip control does. During
     // the Back transition the Skip control is hidden, so this stays inert.
     if (this.mode === MODE.FLYING) this.onSkip();
     else if (this.mode === MODE.ATLAS || this.mode === MODE.EXPLORE) this.onBack();
+  }
+
+  onCanvasPointerDown() {
+    if (this.mode !== MODE.EXPLORE) return;
+    this.ui.collapseOnGlobe();
   }
 
   onCanvasClick() {
@@ -382,35 +620,11 @@ class App {
   }
 
   onHotspotClick() {
-    this.region.triggerPulse(1.4);
-    gsap.fromTo(
-      this.director,
-      { punch: 0 },
-      { punch: 1, duration: 0.5, ease: 'power2.out', yoyo: true, repeat: 1 }
-    );
-    if (this.mode === MODE.ATLAS) {
-      return;
-    }
-    this.returnMode = MODE.EXPLORE;
-    this.prepareAudio();
-    this.mode = MODE.FLYING;
-    this.ui.setPanelEnabled(false);
-    this.ui.hideSelectionNote();
-    this.ui.hidePanel(1.1);
-    this.ui.showSkip();
-    this.director.continueToRegion(() => {
-      this.mode = MODE.ATLAS;
-      this.hotspotArmed = false;
-      this.ui.hideSkip();
-      this.ui.setBackLabel('Earth orbit');
-      this.ui.showDestination(this.currentRegion);
-      this.controls.setEnabled(false);
-      this.startDestinationAudio();
-      this.ui.showHint(`${this.currentRegion.name} \u00b7 adjust the sound layers`, 6.5);
-    });
+    if (this.mode === MODE.EXPLORE) this.selectDestination(this.currentRegion, true);
   }
 
   enterExplore() {
+    this.cancelSelection();
     this.mode = MODE.EXPLORE;
     this.hotspotArmed = false;
     this.ui.setPanelEnabled(false);
@@ -423,6 +637,7 @@ class App {
       onComplete: () => {
         if (this.mode !== MODE.EXPLORE) return;
         this.hotspotArmed = true;
+        if (this.ui.isMobileSheet()) this.ui.setSheetState('peek');
         this.ui.setPanelEnabled(true);
       }
     });
@@ -486,6 +701,7 @@ class App {
   loop = () => {
     requestAnimationFrame(this.loop);
     if (!this.started || !this.director) return;
+    this.updateQuality(performance.now());
     const delta = Math.min(this.clock.getDelta(), 0.05);
     this.elapsed += delta;
 
@@ -520,8 +736,8 @@ class App {
 const app = new App();
 app.init().catch((error) => {
   console.error(error);
-  const sub = document.getElementById('loader-sub');
-  if (sub) sub.textContent = 'Unable to initialise the observatory';
+  app.loaderEffect?.stop();
+  app.ui?.showLoaderError(error.message || 'Unable to initialise the observatory. Please reload to retry.');
 });
 
 window.__jukebox = app;

@@ -3,9 +3,21 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Earth Information Jukebox — Phase 2 alpha</title>
-<meta name="description" content="A cinematic Solar System to Earth journey through six Bangladesh destinations, with environmental sonification." />
+<title>Earth Information Jukebox</title>
+<meta name="description" content="A cinematic Solar System to Earth journey through six Bangladesh destinations plus two NASA EIC showcase destinations, with environmental sonification." />
+<link rel="icon" href="data:," />
 <link rel="stylesheet" href="./styles.css" />
+<script>
+  // A return from the Sonification Lab skips the loader entirely. Mark the
+  // document before first paint so the loading screen and dive never appear.
+  try {
+    if (sessionStorage.getItem('jukebox:warmed') === '1') {
+      document.documentElement.classList.add('is-warm-return');
+    }
+  } catch (error) {
+    // Private browsing or a blocked storage partition: fall back to a cold load.
+  }
+</script>
 <script type="importmap">
 {
   "imports": {
@@ -25,12 +37,13 @@
 <div id="vignette" aria-hidden="true"></div>
 <div id="grain" aria-hidden="true"></div>
 
-<header id="masthead">
+<header id="masthead" data-loader-inert inert>
   <div class="mast-mark">E<span>/</span>I<span>/</span>J</div>
   <div class="mast-text">
     <strong>Earth Information Jukebox</strong>
-    <span>Phase 2 · alpha test</span>
+    <span>NASA Earth Information Center</span>
   </div>
+  <a class="mast-lab-btn" href="./studio.html" aria-label="Open Sonification Lab">Sonification Lab <span aria-hidden="true">&#8599;</span></a>
 </header>
 
 <div id="readout" aria-hidden="true">
@@ -38,8 +51,24 @@
   <div class="ro-row"><span class="ro-key">target</span><span class="ro-val" id="ro-target">cox's bazar · 21.4°N 91.97°E</span></div>
 </div>
 
-<aside id="panel" class="panel">
-  <div class="panel-inner">
+<section id="audio-controls" class="audio-controls" aria-label="Audio controls" data-loader-inert inert>
+  <span id="audio-status" class="audio-status" role="status" aria-live="polite">Audio idle</span>
+  <button id="audio-toggle" class="audio-button" type="button" aria-label="Pause audio" hidden>Pause</button>
+  <button id="speak-toggle" class="audio-button" type="button" aria-pressed="false">Voice guide</button>
+  <button id="audio-mute" class="audio-button" type="button" aria-label="Mute audio" aria-pressed="false">Mute</button>
+  <input id="audio-volume" class="audio-volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Audio volume" aria-valuetext="100%" />
+</section>
+
+<aside id="panel" class="panel" data-sheet="peek" data-view="places" data-search="closed" aria-label="Place explorer" data-loader-inert inert>
+  <button id="panel-peek" class="panel-peek" type="button" aria-expanded="false" aria-controls="panel-body">
+    <span class="peek-handle" aria-hidden="true"></span>
+    <span class="peek-row">
+      <span class="peek-label" id="peek-label">places &middot; 06</span>
+      <span class="peek-value" id="peek-value">Cox's Bazar</span>
+      <span class="peek-chevron" aria-hidden="true">&#8593;</span>
+    </span>
+  </button>
+  <div class="panel-inner" id="panel-body">
 
     <section class="panel-view" id="places-view">
       <h1 class="panel-title">Where would you<br />like to listen?</h1>
@@ -55,8 +84,17 @@
       </div>
 
       <div class="panel-scroll" id="place-scroll">
+        <div id="map-status" class="map-status" hidden>
+          <p id="map-status-text" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div class="map-actions">
+            <button id="map-retry" class="status-button" type="button" hidden>Retry</button>
+            <button id="map-cancel" class="status-button" type="button">Cancel</button>
+          </div>
+        </div>
+        <p class="place-guidance">Choose a place to fly there and hear its environmental data.</p>
         <div id="place-list" class="place-list" role="listbox" aria-label="Destinations"></div>
       </div>
+      <a class="mobile-lab-link" href="./studio.html" aria-label="Open the Sonification Lab">Sound lab <span aria-hidden="true">&#8599;</span></a>
 
       <p class="panel-foot">
         <span class="key-hint"><b>&uarr;&darr;</b> move</span>
@@ -66,8 +104,19 @@
     </section>
 
     <section class="panel-view" id="signals-view" hidden>
-      <p class="eyebrow" id="signal-country">Bangladesh</p>
-      <h1 class="panel-title" id="signal-region">Cox's Bazar</h1>
+      <div class="region-switcher" id="region-switcher">
+        <p class="eyebrow" id="signal-country">Bangladesh</p>
+        <div class="region-switcher-head">
+          <h1 class="panel-title" id="signal-region">Cox's Bazar</h1>
+          <button id="region-switcher-toggle" class="region-switcher-toggle" type="button"
+                  aria-haspopup="listbox" aria-expanded="false" aria-controls="region-switcher-menu"
+                  aria-label="Switch destination">
+            <span class="region-switcher-chevron" aria-hidden="true">&#9662;</span>
+          </button>
+        </div>
+        <div id="region-switcher-menu" class="region-switcher-menu" role="listbox"
+             aria-label="Destinations" hidden></div>
+      </div>
 
       <div class="signal-head">
         <span>Sound layers</span>
@@ -76,6 +125,8 @@
 
       <div class="panel-scroll" id="signal-scroll">
         <div id="signal-list" class="signal-list"></div>
+        <p id="map-provenance" class="signal-explanation"></p>
+        <p id="signal-unavailable" class="signal-explanation" hidden>N/A means no source value is available for this place and year. That sound layer is silent.</p>
       </div>
 
       <div class="yearbar">
@@ -85,6 +136,26 @@
           <span id="year-max">2026</span>
         </div>
         <input id="year-input" class="year-input" type="range" min="1985" max="2026" step="1" value="1985" aria-label="Listening year" />
+        <div class="compare-pair">
+          <span class="compare-pair-label" aria-hidden="true">Compare</span>
+          <select id="compare-pair-select" class="compare-pair-select" aria-label="Comparison interval">
+            <option value="1985:2025" selected>1985 &harr; 2025 (40-yr benchmark)</option>
+            <option value="1985:2026">1985 &harr; 2026 (Full 41-yr span)</option>
+            <option value="1985:1995">1985 &harr; 1995 (Decade 1)</option>
+            <option value="1995:2005">1995 &harr; 2005 (Decade 2)</option>
+            <option value="2005:2015">2005 &harr; 2015 (Decade 3)</option>
+            <option value="2015:2025">2015 &harr; 2025 (Decade 4)</option>
+            <option value="1985:1990">1985 &harr; 1990 (5-yr step)</option>
+            <option value="1990:1995">1990 &harr; 1995 (5-yr step)</option>
+            <option value="1995:2000">1995 &harr; 2000 (5-yr step)</option>
+            <option value="2000:2005">2000 &harr; 2005 (5-yr step)</option>
+            <option value="2005:2010">2005 &harr; 2010 (5-yr step)</option>
+            <option value="2010:2015">2010 &harr; 2015 (5-yr step)</option>
+            <option value="2015:2020">2015 &harr; 2020 (5-yr step)</option>
+            <option value="2020:2025">2020 &harr; 2025 (5-yr step)</option>
+            <option value="2021:2026">2021 &harr; 2026 (Latest 5-yr)</option>
+          </select>
+        </div>
         <div class="year-actions">
           <button id="play-1985" class="year-btn" type="button">Play 1985</button>
           <button id="compare-btn" class="year-btn year-btn-wide" type="button">Compare 1985 &harr; 2025</button>
@@ -95,6 +166,8 @@
 
   </div>
 </aside>
+
+<div id="sheet-scrim" class="sheet-scrim" aria-hidden="true"></div>
 
 <div id="selection-note" class="selection-note" aria-live="polite">
   <span class="sn-eyebrow" id="sn-eyebrow">Explore Earth</span>
@@ -110,24 +183,7 @@
   </span>
 </div>
 
-<aside id="destination" class="destination" aria-live="polite">
-  <div class="dest-inner">
-    <p class="eyebrow">Destination</p>
-    <h2 class="dest-title">Cox's Bazar</h2>
-    <p class="dest-sub">Bangladesh &middot; Bay of Bengal</p>
-    <dl class="dest-meta">
-      <div><dt>position</dt><dd>21.43&deg;N&nbsp; 91.97&deg;E</dd></div>
-      <div><dt>state</dt><dd>available to explore</dd></div>
-    </dl>
-    <button class="dest-btn" id="listen-btn" disabled>
-      <span class="dest-btn-label">Listen</span>
-      <span class="dest-btn-tag">Coming next</span>
-    </button>
-    <p class="dest-note">Phase 1 is a visual journey only. No observation data or sound is processed yet.</p>
-  </div>
-</aside>
-
-<nav id="backbar" class="backbar" aria-hidden="true">
+<nav id="backbar" class="backbar" aria-hidden="true" data-loader-inert inert>
   <button id="back-btn" class="back-btn">
     <span class="back-arrow">&#8592;</span>
     <span id="back-label">Back to solar system</span>
@@ -136,7 +192,7 @@
 
 <div id="hint" class="hint" aria-live="polite"></div>
 
-<button id="skip-btn" class="skip-btn" type="button" aria-label="Skip the cinematic and reveal the destination (Esc)" title="Skip (Esc)" disabled>
+<button id="skip-btn" class="skip-btn" type="button" aria-label="Skip the cinematic and reveal the destination (Esc)" title="Skip (Esc)" data-loader-inert inert disabled>
   <span class="skip-label">Skip</span>
   <span class="skip-key" aria-hidden="true">Esc</span>
   <span class="skip-arrow" aria-hidden="true">&#8594;</span>
@@ -150,9 +206,10 @@
       <span>Information</span>
       <span>Jukebox</span>
     </p>
-    <p class="loader-sub" id="loader-sub">Preparing the observatory&hellip;</p>
-    <div class="loader-track"><span class="loader-fill" id="loader-fill"></span></div>
-    <p class="loader-foot">Champion Edition &middot; synthesized environmental audio</p>
+    <p class="loader-sub" id="loader-sub" role="status" aria-live="polite" aria-atomic="true">Preparing the observatory&hellip;</p>
+    <div class="loader-track" id="loader-progress" role="progressbar" aria-label="Preparing the observatory" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="loader-fill" id="loader-fill"></span></div>
+    <button id="loader-retry" class="status-button loader-retry" type="button" hidden>Retry loading</button>
+    <p class="loader-foot">Synthesized environmental audio</p>
   </div>
 </div>
 

@@ -13,6 +13,11 @@ const WIDE = {
   offY: 0
 };
 
+// The wide shot's rightward sun/Earth composition needs a centered subject in
+// portrait. Blend from the desktop offset to zero between these aspect ratios.
+const WIDE_PORTRAIT_ASPECT = 0.82;
+const WIDE_LANDSCAPE_ASPECT = 1.16;
+
 const REGION_EL = 3.2 * DEG;
 
 // One global multiplier keeps every transition in sync. Base durations live in
@@ -30,15 +35,16 @@ export class CameraDirector {
     this.camera = camera;
     this.earth = earth;
     this.region = region;
+    this.wideFraming = this.getWideFraming();
 
     this.rig = {
-      dist: WIDE.dist,
+      dist: this.wideFraming.dist,
       az: 0,
-      el: WIDE.elDeg * DEG,
-      fov: WIDE.fov,
-      focus: WIDE.focus,
-      offX: WIDE.offX,
-      offY: WIDE.offY
+      el: this.wideFraming.elDeg * DEG,
+      fov: this.wideFraming.fov,
+      focus: this.wideFraming.focus,
+      offX: this.wideFraming.offX,
+      offY: this.wideFraming.offY
     };
 
     this.state = STATES.SOLAR_SYSTEM;
@@ -82,6 +88,30 @@ export class CameraDirector {
     this.regionElTilt = this.regionEl;
 
     this.setWideAzimuth();
+  }
+
+  getWideFraming() {
+    const aspect = this.camera.aspect || window.innerWidth / window.innerHeight;
+    const blend = clamp(
+      (aspect - WIDE_PORTRAIT_ASPECT) / (WIDE_LANDSCAPE_ASPECT - WIDE_PORTRAIT_ASPECT),
+      0,
+      1
+    );
+    return {
+      dist: WIDE.dist,
+      elDeg: WIDE.elDeg,
+      fov: WIDE.fov,
+      focus: WIDE.focus,
+      offX: WIDE.offX * blend,
+      offY: WIDE.offY
+    };
+  }
+
+  refreshWideFraming() {
+    this.wideFraming = this.getWideFraming();
+    if (this.state !== STATES.SOLAR_SYSTEM || this.locked || gsap.isTweening(this.rig)) return;
+    this.rig.offX = this.wideFraming.offX;
+    this.rig.offY = this.wideFraming.offY;
   }
 
   setWideAzimuth() {
@@ -129,21 +159,24 @@ export class CameraDirector {
 
   introDolly(duration) {
     const seconds = scaled(duration);
+    const wide = this.getWideFraming();
+    this.wideFraming = wide;
     return gsap.fromTo(
       this.rig,
       {
-        dist: WIDE.dist + 4.4,
-        fov: WIDE.fov + 5,
-        offX: -0.145,
+        dist: wide.dist + 4.4,
+        fov: wide.fov + 5,
+        offX: wide.offX * 0.52,
         offY: -0.026
       },
       {
-        dist: WIDE.dist,
-        fov: WIDE.fov,
-        offX: WIDE.offX,
-        offY: WIDE.offY,
+        dist: wide.dist,
+        fov: wide.fov,
+        offX: wide.offX,
+        offY: wide.offY,
         duration: seconds,
-        ease: 'power2.out'
+        ease: 'power2.out',
+        onComplete: () => this.refreshWideFraming()
       }
     );
   }
@@ -433,6 +466,8 @@ export class CameraDirector {
     this.locked = true;
     const rig = this.rig;
     const wideAz = this.wideAz;
+    const wide = this.getWideFraming();
+    this.wideFraming = wide;
 
     const tl = gsap.timeline({
       onComplete: () => {
@@ -468,12 +503,12 @@ export class CameraDirector {
 
     this.scheduleState(tl, STATES.SOLAR_SYSTEM, scaled(6.4));
     tl.to(rig, {
-      dist: WIDE.dist,
-      fov: WIDE.fov,
-      focus: WIDE.focus,
-      offX: WIDE.offX,
-      offY: WIDE.offY,
-      el: WIDE.elDeg * DEG,
+      dist: wide.dist,
+      fov: wide.fov,
+      focus: wide.focus,
+      offX: wide.offX,
+      offY: wide.offY,
+      el: wide.elDeg * DEG,
       az: wideAz,
       duration: scaled(5.6),
       ease: 'power2.inOut'

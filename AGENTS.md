@@ -9,6 +9,7 @@ Read this first, then the document that matches your task:
 | [`README.md`](README.md) | What the project is, how to run it, file layout |
 | [`docs/architecture.md`](docs/architecture.md) | Module boundaries, state machines, render loop, conventions |
 | [`docs/camera-transitions.md`](docs/camera-transitions.md) | Camera baseline timings, cinematic sequence, interruption guarantees, manual checks |
+| [`docs/mobile-sheet.md`](docs/mobile-sheet.md) | Mobile bottom-sheet states, geometry, interaction, and mode mapping |
 | [`docs/workflow.md`](docs/workflow.md) | How to make, verify, and commit a change |
 | [`docs/context-architecture.md`](docs/context-architecture.md) | Where documentation lives and how to keep it accurate |
 
@@ -16,10 +17,12 @@ Read this first, then the document that matches your task:
 
 ## Project snapshot
 
-- **Phase 2 alpha** of the Earth Information Jukebox: a cinematic Solar System →
-  Earth → destination journey across six Bangladesh regions from the Champion
-  Edition dataset, ending on a flat map stage with a signal panel and Web Audio
-  sonification.
+- The Earth Information Jukebox: a cinematic Solar System →
+  Earth → destination journey across eight destinations — six Bangladesh regions
+  from the Champion Edition dataset plus Mount Everest and the Pacific Northwest
+  wildfires from the NASA EIC gallery — ending on a flat map stage with a signal
+  panel and Web Audio sonification. The signal panel can switch destinations in
+  place, and its audio toolbar has an explicit Play/Pause control.
 - Vanilla JavaScript ES modules. No framework, no bundler, no transpiler.
 - No npm dependencies. Three.js and GSAP are vendored (versions in `README.md`).
 - No backend. `server.mjs` is a static file server for local development only.
@@ -84,9 +87,13 @@ There is no `npm install`, no `npm test`, and no `npm run build`.
 | Input handling (drag, zoom, pinch) | `src/controls.js` |
 | Earth materials, clouds, atmosphere | `src/earth.js` |
 | Region marker geometry, shaders, retargeting | `src/region.js` |
-| Destination list, colours, yearly signals | `src/regions.js` (generated) |
+| Destination list, colours, yearly signals, comparison pairs | `src/regions.js` (generated) |
 | Source dataset or signal metadata | `assets/data/*.json` + `tools/build-regions.mjs` |
 | Flat map windows, zoom, placeholder plates | `src/atlas.js` + `ATLAS` in `src/config.js` |
+| Region plate files, dates, and credits | `src/region-imagery.js` |
+| Studio filmstrip presets, dates, frame stepping | `src/filmstrip.js` |
+| Studio playback, dataset switching, scanline | `src/studio.js` + `studio.html` |
+| Studio nebula/starfield backdrop | `src/studio-sky.js` + `studio.css` |
 | Sun surface, corona, flares | `src/sun.js` |
 | Planet orbits, Saturn ring, orbit lines | `src/solar-system.js` |
 | Nebula sky backdrop and stars | `src/starfield.js` |
@@ -114,24 +121,37 @@ No automated tests exist. Before calling a change done:
 2. The loader completes and auto-reveals the solar system.
 3. Console has no errors or WebGL shader compile failures.
 4. The intro dolly completes and the solar system is framed.
-5. The place explorer lists all six destinations; search narrows the list,
+5. The place explorer lists all eight destinations; search narrows the list,
    clearing it restores the country group, `/` focuses search, and the arrow keys
    plus Enter move through and select destinations.
 6. Selecting each destination flies to it, reaches `locality`, and shows the
-   signal panel with the correct values. Cox's Bazar uses the real plate; the
-   other five use placeholder plates.
+   signal panel with the correct values. All eight use their configured locality
+   plate; the provenance note identifies its source and date. The two NASA EIC
+   destinations start at 2000 and expose only 2000–2026 in the slider and pair list.
 7. Signal toggles silence/restore their layer, the year slider changes values and
-   audio, and Compare alternates 1985/2025.
-8. Dragging rotates, scrolling zooms, and interrupting a flight restores manual
+   audio, and Compare alternates the two years in `#compare-pair-select` (and shows
+   deltas while it runs). Signals-view `ArrowLeft`/`ArrowRight` step the year and
+   `c` toggles Compare. The `#signal-region` header or its chevron opens the region
+   switcher; choosing another destination updates the plate, marker, panel, and
+   audio in place without flying back.
+8. The audio toolbar's Play/Pause button suspends and resumes playback in place
+   (status changes to "Audio paused" and back to "Playing"); Mute and the volume
+   slider keep working independently.
+9. Dragging rotates, scrolling zooms, and interrupting a flight restores manual
    control (and stops audio). Escape during an outbound flight skips it.
-9. The back button (and Escape, once in the region) returns to the view the flight
+10. The back button (and Escape, once in the region) returns to the view the flight
    started from — the Earth orbit if it started there, otherwise the solar system —
    and suspends audio.
-10. Clicking Earth from the wide view enters free orbit; the place explorer stays
-    usable, selecting a destination works, and Back returns to that orbit framing
-    with the panel enabled and the hotspot armed.
-11. Resizing the window keeps the scene and overlays aligned.
-12. `git status` shows only the files you intended to change.
+11. Clicking Earth from the wide view enters free orbit; the place explorer stays
+   usable, selecting a destination works, and Back returns to that orbit framing
+   with the panel enabled and the hotspot armed.
+12. The Studio loads its default filmstrip, `#dataset-select` swaps all three
+   datasets without reloading, the weather block hides for the two EIC series, and
+   the scanline tracks playback. Its `#studio-sky` backdrop renders the nebula and
+   drifting stars (or the CSS fallback), and the transport/readout panels stay
+   legible over it.
+13. Resizing the window keeps the scene and overlays aligned.
+14. `git status` shows only the files you intended to change.
 
 If your change touches shaders, also check on a second GPU or browser if possible;
 shader issues often appear only on one driver.

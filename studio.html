@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Sonification lab — Earth Information Jukebox</title>
+<meta name="description" content="NASA Earth Information Center filmstrips — Cox's Bazar, Mount Everest and the Pacific Northwest wildfires — with the sound generated from each frame in real time." />
+<link rel="icon" href="data:," />
+<link rel="stylesheet" href="./studio.css" />
+</head>
+<body>
+
+<canvas id="studio-sky" class="studio-sky" aria-hidden="true"></canvas>
+<div id="vignette" aria-hidden="true"></div>
+<div id="grain" aria-hidden="true"></div>
+
+<header id="masthead">
+  <a id="studio-back-btn" class="studio-back-btn" href="./index.html" aria-label="Back to Earth Information Jukebox">
+    <span aria-hidden="true">&#8592;</span>
+    <span>Back</span>
+  </a>
+  <a class="mast-mark" href="./index.html" aria-label="Back to Earth Information Jukebox" title="Back to Earth Information Jukebox">E<span>/</span>I<span>/</span>J</a>
+  <div class="mast-text">
+    <strong>Sonification lab</strong>
+    <span id="dataset-title">Cox's Bazar &middot; 2000&ndash;2010</span>
+  </div>
+  <label class="dataset">
+    <span class="visually-hidden">NASA EIC filmstrip</span>
+    <select id="dataset-select" aria-label="Select NASA EIC filmstrip dataset" disabled>
+      <option value="coxs_bazar" selected>Cox's Bazar &middot; 2000&ndash;2010 (130 MODIS monthly frames)</option>
+      <option value="mount_everest">Mount Everest &amp; Imja Glacier &middot; 2000&ndash;2026 (27 annual EIC frames)</option>
+      <option value="global_wildfires">Global Wildfires &amp; Smoke &middot; 2000&ndash;2026 (27 annual EIC frames)</option>
+    </select>
+  </label>
+  <div class="mast-status" id="status" role="status">Loading filmstrip&hellip;</div>
+</header>
+
+<main id="lab">
+
+  <section class="stage" aria-label="Filmstrip playback">
+    <figure class="frame">
+      <canvas id="frame" width="512" height="512" role="img" aria-label="Loading satellite frame"></canvas>
+      <div class="frame-scan" id="frame-scan" aria-hidden="true"></div>
+      <figcaption class="frame-caption">
+        <span class="frame-year" id="year-label">2000</span>
+        <span class="frame-month" id="month-label">March</span>
+      </figcaption>
+    </figure>
+
+    <div class="timeline-wrap">
+      <div class="timeline" id="timeline" role="slider" tabindex="-1" aria-disabled="true"
+           aria-label="Filmstrip position" aria-valuemin="0" aria-valuemax="129"
+           aria-valuenow="0" aria-valuetext="March 2000">
+        <div class="timeline-ticks" id="timeline-ticks" aria-hidden="true"></div>
+        <div class="timeline-head" id="timeline-head" aria-hidden="true"></div>
+      </div>
+      <div class="timeline-scale" id="timeline-scale" aria-hidden="true">
+        <span>2000</span><span>2002</span><span>2004</span><span>2006</span><span>2008</span><span>2010</span>
+      </div>
+    </div>
+
+  </section>
+
+  <div class="transport" role="group" aria-label="Playback controls">
+    <button class="btn btn-play" id="play-btn" aria-pressed="false" disabled>
+      <span class="btn-icon" aria-hidden="true">&#9654;</span>
+      <span id="play-label">Play the decade</span>
+    </button>
+    <button class="btn btn-ghost" id="restart-btn" disabled>Restart</button>
+
+    <label class="speed">
+      <span>pace</span>
+      <select id="speed-select" disabled>
+        <option value="1">slow</option>
+        <option value="0.5" selected>normal</option>
+        <option value="0.35">fast</option>
+        <option value="0.25">very fast</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="playback-help">
+    <label class="announce">
+      <input type="checkbox" id="announce-toggle" />
+      <span>Read each frame aloud <span class="announce-note">(screen reader)</span></span>
+    </label>
+    <p class="hint" id="hint" role="status">Space plays and pauses &middot; arrow keys step one frame</p>
+    <button class="btn btn-ghost" id="retry-btn" hidden>Retry loading filmstrip</button>
+  </div>
+
+  <aside class="readout" aria-label="What the sound is made of">
+
+    <div class="block">
+      <p class="eyebrow">This frame</p>
+      <p class="sentence" id="sentence">Loading&hellip;</p>
+      <div class="bars" id="bars">
+        <div class="bar" data-key="cloud">
+          <span class="bar-label">cloud</span>
+          <span class="bar-track"><span class="bar-fill"></span></span>
+          <span class="bar-value">&mdash;</span>
+        </div>
+        <div class="bar" data-key="lum">
+          <span class="bar-label">brightness</span>
+          <span class="bar-track"><span class="bar-fill"></span></span>
+          <span class="bar-value">&mdash;</span>
+        </div>
+        <div class="bar" data-key="green">
+          <span class="bar-label">greenness</span>
+          <span class="bar-track"><span class="bar-fill"></span></span>
+          <span class="bar-value">&mdash;</span>
+        </div>
+        <div class="bar" data-key="edge">
+          <span class="bar-label">edge energy</span>
+          <span class="bar-track"><span class="bar-fill"></span></span>
+          <span class="bar-value">&mdash;</span>
+        </div>
+        <div class="bar" data-key="water">
+          <span class="bar-label">water</span>
+          <span class="bar-track"><span class="bar-fill"></span></span>
+          <span class="bar-value">&mdash;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="block" id="weather-block">
+      <p class="eyebrow">Surface weather, this month</p>
+      <dl class="series" id="series">
+        <div><dt>temperature</dt><dd id="v-temp">&mdash;</dd></div>
+        <div><dt>rain</dt><dd id="v-rain">&mdash;</dd></div>
+        <div><dt>humidity</dt><dd id="v-humidity">&mdash;</dd></div>
+        <div><dt>wind</dt><dd id="v-wind">&mdash;</dd></div>
+        <div><dt>sunlight</dt><dd id="v-solar">&mdash;</dd></div>
+      </dl>
+      <p class="source">NASA POWER point series &middot; MERRA-2 / SRB / SYN1DEG &middot; monthly averages of daily values</p>
+    </div>
+
+    <details class="mapping" id="mapping">
+      <summary>How the image becomes sound</summary>
+      <dl class="map-list">
+        <div><dt>cloud fraction</dt><dd>level and brightness of the noise bed</dd></div>
+        <div><dt>mean luminance</dt><dd>low-pass cutoff &mdash; how open the pad sounds</dd></div>
+        <div><dt>greenness</dt><dd>chord colour: minor, major, suspended</dd></div>
+        <div><dt>edge energy</dt><dd>rhythmic density of the plucked pulse</dd></div>
+        <div><dt>water fraction</dt><dd>sub-bass weight</dd></div>
+        <div><dt>temperature</dt><dd>root note, walking up a pentatonic scale</dd></div>
+        <div><dt>rainfall</dt><dd>high-band patter and pulse rate</dd></div>
+        <div><dt>wind</dt><dd>centre frequency of the noise bed</dd></div>
+        <div><dt>sunlight</dt><dd>a quiet high shimmer</dd></div>
+        <div><dt>GISTEMP anomaly</dt><dd>slow detune of a second root &mdash; the decade as beating</dd></div>
+      </dl>
+      <p class="map-note" id="map-note">
+        Frames are 256&times;256 satellite crops measured in the browser at load time.
+        The Cox's Bazar strip steps monthly from March 2000 to December 2010; the two
+        NASA EIC strips step annually from 2000 to 2026. Exact acquisition days are not
+        recorded in the filmstrip metadata. Missing weather readings use synthesis
+        defaults; they are not measured zeroes. GISTEMP supplies a separate global
+        anomaly layer, not the imagery. No sound is pre-recorded.
+      </p>
+    </details>
+
+    <p class="analysis" id="analysis"></p>
+  </aside>
+</main>
+
+<div class="visually-hidden" id="live" aria-live="polite"></div>
+
+<noscript><p class="noscript">This lab needs JavaScript and a browser with Web Audio.</p></noscript>
+
+<script type="module" src="./src/studio.js"></script>
+</body>
+</html>

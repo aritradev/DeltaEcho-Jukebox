@@ -73,6 +73,7 @@ When two documents could state the same fact, only one owns it.
 | Run commands and ports | `README.md` → Quick start | repeat only the short form |
 | Tuning constants and their values | `src/config.js` | describe the knob, not the number |
 | Camera timings, transition targets, interruption semantics | `docs/camera-transitions.md` (authoritative baseline) | link; never restate its guarantees |
+| Mobile sheet states, heights, interactions, mode mapping | `docs/mobile-sheet.md` | link; do not restate dimensions |
 | Module responsibilities | `docs/architecture.md` §4 | one-line mentions |
 | Rules and prohibitions | `AGENTS.md` | link |
 | Commit conventions | `docs/workflow.md` §6 | link |

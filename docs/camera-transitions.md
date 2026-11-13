@@ -1,7 +1,7 @@
 # Camera transitions — behavioural contract
 
-This document records the camera behaviour of the **current Phase 2 alpha
-prototype** and separates two things that must not be confused:
+This document records the camera behaviour of the **current production build** and
+separates two things that must not be confused:
 
 - the **approved cinematic experience and its reliability guarantees** —
   interruption recovery, timeline cleanup, lock restoration, and cancellation of
@@ -9,13 +9,13 @@ prototype** and separates two things that must not be confused:
 - the **current choreography, timings, and camera targets**, which are a dated
   baseline recorded for regression comparison, not permanent requirements.
 
-Phase 2 alpha is an early, unfinished prototype. The journey now continues past the
-region into a flat map stage and serves six Bangladesh destinations. Region
-retargeting is implemented (`CameraDirector.setRegion()`), but the destinations still
-share one marker, one framing, and one atlas window. Per-region framing and
-georeferencing remain future work. See §13.
+The journey continues past the region into a flat map stage and serves six
+Bangladesh destinations. Region retargeting is implemented
+(`CameraDirector.setRegion()`), but the destinations still share one marker, one
+framing, and one atlas window. Per-region framing and georeferencing remain future
+work. See §13.
 
-> **Phase 2 alpha addition.** After cloud entry the camera hands over to a flat
+> **Flat-map stage.** After cloud entry the camera hands over to a flat
 > map: two camera-attached planes in `src/atlas.js` whose texture windows animate
 > while the camera transform keeps its single writer. The `STATES` sequence has
 > grown from six stages to eight (`CONTINENT`, `COUNTRY`, `LOCALITY` replace
@@ -25,8 +25,8 @@ georeferencing remain future work. See §13.
 Scope: `src/camera-director.js`, the camera-related parts of `src/main.js`,
 `src/controls.js`, and the UI state they drive.
 
-> **Baseline.** Values captured at the Phase 2 alpha commit (`feat: add a flat
-> continent map stage after cloud entry`). The previous Phase 1 baseline was
+> **Baseline.** Values captured at the flat-map stage baseline commit (`feat: add a
+> flat continent map stage after cloud entry`). The previous baseline was
 > `8ab5577`. If the code and this document disagree, the code is correct and this
 > document is stale — see §11.
 >
@@ -206,15 +206,36 @@ divides them by `speed`, so every transition retimes together.
 "State" is the `STATES` value emitted at that timeline position; the readout
 renders it as `NN · name`.
 
-Everything in this section is the **baseline choreography at the Phase 2 alpha
-commit**. It records what the prototype currently does so a later change can be
+Everything in this section is the **baseline choreography at the flat-map stage
+baseline commit**. It records what the build currently does so a later change can be
 compared against it. None of these values is a lifetime requirement — §11.2
 describes how to change them deliberately.
 
+Wide framing is aspect-aware. `getWideFraming()` blends `WIDE.offX` from 0 at
+aspect ≤ 0.82 to −0.278 at aspect ≥ 1.16, so portrait keeps Earth centred behind
+the mobile sheet while landscape and desktop retain the original composition.
+`refreshWideFraming()` reapplies the offset after a resize or orientation change
+while the camera is parked in the solar system. The tables below quote the
+landscape/desktop result where an offset is involved.
+
+### 5.0 Map readiness gate
+
+A selection may wait for atlas imagery before any camera timeline is created. During
+this gate:
+
+- `MODE` stays `SOLAR` or `EXPLORE`; the panel and globe remain usable.
+- The Places view reports preparation and offers Cancel; a failure offers Retry.
+- Escape, Back, drag intent, or entering free orbit cancels the preparation.
+- `selectionToken` makes only the latest selection eligible to continue. A late
+  response from an older selection is discarded.
+- Successful readiness applies the region and starts the existing flight. The
+  timeline timings below are unchanged; the gate simply ends before t = 0.
+
 ### 5.1 `beginFlight` — category selection (full journey)
 
-Constructed by `CameraDirector.beginFlight()`, called from `main.onSelect()` before
-the 850 ms panel-hide timer.
+Constructed by `CameraDirector.beginFlight()`, called from
+`main.selectDestination()` after the selected region's map imagery and needed
+textures are ready, and before the panel-hide timer is scheduled.
 
 | At | State | Rig / scene changes |
 | --- | --- | --- |
@@ -281,7 +302,7 @@ known cloud-covered state.
 | --- | --- | --- |
 | 0 | `06 continent` | `atlasA`/`atlasB` `opacity → 0` (0.45 s), `regionVisibility → 0` (0.9 s), `veil → 0` (0.6 s), `cloudPass → 0` (1.7 s, `power1.inOut`, starting from 1), `cloudOpacity → 0.72` (1.1 s), `spinScale → 0.55` (1 s), `dist → 2.6`, `fov → 44`, `offX → 0`, `offY → 0.023` (1.6 s) |
 | 1.3 | `02 earth approach` | `dist → 5.2`, `fov → 46`, `focus → 0.45` (2.2 s); `el → 12°`, `az → wideAz` (2.2 s); `cloudOpacity → 0.3`; `orbitLineFade → 0`, `coronaScale → 1` |
-| 2.7 | — | Final tween to `WIDE`: `dist 10.8`, `fov 56`, `focus 0`, `offX −0.278`, `offY 0`, `el 15°`, `az wideAz` (2.8 s, ends 5.5) |
+| 2.7 | — | Final tween to the aspect-aware `WIDE` framing: `dist 10.8`, `fov 56`, `focus 0`, `offX → wide.offX` (desktop −0.278, portrait 0), `offY 0`, `el 15°`, `az wideAz` (2.8 s, ends 5.5) |
 | 3.2 | `01 solar system` | Readout switches before the camera finishes arriving |
 | 5.5 | — | 0.05 s padding tween |
 | 5.55 | complete | `timeline = null`, `locked = false`, `setState(SOLAR_SYSTEM)`, callback |
@@ -348,7 +369,11 @@ Called once by `main.onEnter()` with `duration = 5.2` base, scaled to 2.6 s.
 | --- | --- |
 | `dist = 15.2` | `dist = 10.8` (`WIDE.dist`) |
 | `fov = 61` | `fov = 56` (`WIDE.fov`) |
-| `offX = −0.145`, `offY = −0.026` | `offX = −0.278`, `offY = 0` |
+| `offX = wide.offX * 0.52`, `offY = −0.026` | `offX = wide.offX`, `offY = 0` |
+
+On a landscape/desktop aspect that is `offX −0.145 → −0.278`; in portrait both
+ends collapse to 0 because `getWideFraming()` blends the wide offset by aspect.
+`onComplete` calls `refreshWideFraming()` to settle the parked rig.
 
 Ease `power2.out`. `az`, `el`, and `focus` are untouched.
 
@@ -587,6 +612,11 @@ user's current viewpoint. In the current prototype this is achieved by
   visible. During the Back transition the control is hidden, so `Escape` is inert.
 - The back button handler returns immediately when `MODE === FLYING`.
 
+**MUST** — Treat a pending map preparation as pre-flight, not as `FLYING`. Escape,
+Back, and drag cancel it without killing or skipping a camera timeline. Because
+`MODE` has not changed, no camera transform is animated and no completion callback
+exists yet.
+
 **MUST** — Keep the flat map inert. `MODE.ATLAS` means a plate is on screen and drag,
 wheel, and pinch do nothing. Controls are re-enabled only by the callback that runs
 after the plates have faded out, never while one is still visible. This is an
@@ -617,6 +647,9 @@ any retargeting path must satisfy §7.3–§7.4 while Earth is rotating. See §1
 | Back during `FLYING` | No effect | Verified |
 | Interrupt within 0.85 s of selection | Suspected: stale `hidePanel` timer hides the restored panel (Q2) | Runtime-pending |
 | Interrupt during return with `dist < 6` | Suspected: `hotspotArmed = true` while `regionVisibility → 0` leaves an invisible-but-hittable hotspot (Q8) | Runtime-pending |
+| Escape/Back/drag while a destination map is preparing | Preparation cancelled; `MODE` unchanged; panel remains usable; no flight starts from the stale request | Verified |
+| Map preparation fails | Inline Retry and Cancel appear; no flight starts; Retry can recover after the request succeeds | Verified |
+| Choosing another place while preparation is pending | Latest selection wins; the earlier response is discarded by the token check | Verified |
 
 ### 7.6 What is deliberately *not* protected
 
@@ -652,10 +685,11 @@ support will likely add per-region state.
 | `punch` | `main.onHotspotClick` | `main.updateHotspot` | 0 → 1 → 0 |
 | `atlasA` / `atlasB` | director tweens | `src/atlas.js` | `{u, v, zoom, opacity}`, opacity 0 → 1 → 0 |
 
-`atlasA` maps `asia-satellite.jpg`, `atlasB` maps `coxs-bazar.jpg`. Both are plain
-objects owned by the director; `Atlas.update()` converts them into texture
+`atlasA` maps `asia-satellite.jpg`; `atlasB` maps the selected region's locality
+plate (Cox's Bazar or one of the five NASA HLS L30 plates). Both are plain objects
+owned by the director; `Atlas.update()` converts them into texture
 `offset`/`repeat` each frame. `ATLAS.levels` in `src/config.js` holds their tuned
-`start`/`end` values.
+`start`/`end` values; `src/region-imagery.js` holds the per-region files and credits.
 
 `cloudPass` drives `src/cloud-pass.js`: a camera-attached group of procedural
 billboard puffs plus two cloud-field backdrops. The planes travel from `FAR` to
@@ -738,6 +772,8 @@ Reload the page between destructive tests to return to the baseline.
 | I10 | After any interruption, inspect `__jukebox.director` | `isFlying === false`, `locked === false`, `rig.dist` unchanged by recovery |
 | I11 | After I3/I4, click the hotspot | Flight continues to the map; destination card appears at the end |
 | I12 | From `EXPLORE`, select a place, then press Escape/Back on the map | Returns to the orbit framing (`dist 3.5`, `fov 42`, `focus 0.85`) with the same azimuth, panel enabled, and hotspot armed |
+| I13 | Throttle the network, select a place, then press Escape or Cancel while "Preparing maps" is shown | Preparation ends; `MODE` is unchanged; panel stays usable; no delayed flight starts |
+| I14 | Block an atlas image, select a place, then allow the request and press Retry | Failure is reported inline; Retry starts the same flight after the image loads |
 
 Probe available in the console (exposed by `main.js`):
 
@@ -765,7 +801,9 @@ baseline choreography:
    Back/Escape from that destination returns to the orbit framing (`dist 3.5`,
    `fov 42`, `focus 0.85`, same azimuth), re-enables the panel, and re-arms the
    hotspot. A destination started from the wide view still returns wide.
-6. `git diff` shows no change outside the intended files.
+6. Pending-map Escape/Cancel and failure/Retry behave as described in §5.0 and
+   §7.5; `MODE` never enters `FLYING` while a request is unresolved.
+7. `git diff` shows no change outside the intended files.
 
 ---
 
@@ -790,7 +828,7 @@ current approach.
 
 | ID | Finding | Evidence | Status |
 | --- | --- | --- | --- |
-| Q1 | *Resolved in Phase 2 alpha.* The `shortened` flag and the `settle` floor are gone; `buildRegionSequence()` is now the single region tail used by both entry paths, and its duration is exactly the sum of `continent + country + dissolve + locality` | `camera-director.js → buildRegionSequence` | Resolved |
+| Q1 | *Resolved.* The `shortened` flag and the `settle` floor are gone; `buildRegionSequence()` is now the single region tail used by both entry paths, and its duration is exactly the sum of `continent + country + dissolve + locality` | `camera-director.js → buildRegionSequence` | Resolved |
 | Q2 | **Early-interrupt panel race.** `onSelect()` schedules `hidePanel(0.8)` at 850 ms and never clears it. An interrupt before 0.85 s calls `showPanel()`, then the stale timer fades the panel out again. Because `.panel-inner` keeps `pointer-events: auto`, the invisible panel may remain clickable | `main.js` 850 ms timer; `ui.js → hidePanel`; `styles.css .panel-inner` | **Suspected defect — runtime validation required** |
 | Q3 | **Unguarded camera tweens vs. manual input.** `introDolly` writes `dist`/`fov`/`offX`/`offY` for 2.6 s with no input guard, so wheel zoom during it is overwritten each frame; it also starts at `dist = 15.2`, above the user maximum of 15. `enterFreeOrbit` similarly tweens `el` for 1.7 s and can fight a drag | `camera-director.js` introDolly/enterFreeOrbit; `controls.js` clamps | Confirmed source fact |
 | Q4 | **Region target drift — azimuth resolved.** `buildRegionSequence()` still captures `regionElTilt` at click time, but the region approach sets `regionTrack = true`; `apply()` re-samples `earth.getRegionAzElTilt().az` every frame and eases `az` toward it, so the descent stays radial while Earth spins. Elevation drift remains but is small and does not affect the lateral path | `camera-director.js → apply/buildRegionSequence`; `earth.getRegionAzElTilt()` | Azimuth resolved; elevation drift accepted |
@@ -848,9 +886,9 @@ intended-but-absent behaviour.
 
 | Item | Value |
 | --- | --- |
-| Applies to | Phase 2 alpha prototype, six destinations, at the baseline commit |
-| Baseline commit | Phase 2 alpha (`feat: add a flat continent map stage after cloud entry`) |
-| Previous baseline | `8ab5577` (Phase 1) |
+| Applies to | Production build, six destinations, at the baseline commit |
+| Baseline commit | Flat-map stage baseline (`feat: add a flat continent map stage after cloud entry`) |
+| Previous baseline | `8ab5577` |
 | Files verified | `src/camera-director.js`, `src/atlas.js`, `src/main.js`, `src/controls.js`, `src/earth.js`, `src/ui.js`, `src/config.js`, `styles.css` |
 | Method | Direct source reading, plus a headless-Chrome scrub of the real timeline (`src/atlas.js` window math, state order, Back path) at 1600×900 and 760×1000 |
 | Runtime-confirmed items | Atlas framing, zoom, and dissolve; state order `05 → 06 → 07 → 08`; Back via `exitAtlas`; zero console errors in both aspects |
@@ -859,7 +897,7 @@ intended-but-absent behaviour.
 
 ## 13. Prototype scope and future extensibility
 
-Phase 2 alpha is not final or fully polished. The camera system currently serves
+The camera system currently serves
 **six** destinations, but they share one framing model, and several choices reflect
 that. Recording them as baseline does not make them permanent.
 

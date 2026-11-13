@@ -5,6 +5,13 @@ export const RENDER = {
   near: 0.05,
   far: 12000,
   maxPixelRatio: 2,
+  mobilePixelRatio: 1.5,
+  minPixelRatio: 0.75,
+  qualityStep: 0.25,
+  qualitySampleMs: 3000,
+  qualityCooldownMs: 8000,
+  slowFrameMs: 34,
+  fastFrameMs: 19,
   exposure: 1.0
 };
 

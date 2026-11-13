@@ -23,6 +23,11 @@ const TYPES = {
   '.ico': 'image/x-icon'
 };
 
+// Textures and vendored libraries are content-stable and expensive to decode,
+// so a warm return from the Studio can reuse them for an hour. Pages, scripts,
+// and data stay uncached so edits show up on reload.
+const LONG_LIVED = /^\/(?:assets\/textures|vendor)\//;
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
@@ -38,7 +43,7 @@ const server = createServer(async (req, res) => {
     const body = await readFile(target);
     res.writeHead(200, {
       'Content-Type': TYPES[extname(target).toLowerCase()] || 'application/octet-stream',
-      'Cache-Control': 'no-cache'
+      'Cache-Control': LONG_LIVED.test(pathname) ? 'public, max-age=3600' : 'no-cache'
     });
     res.end(body);
   } catch {

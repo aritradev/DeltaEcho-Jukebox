@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { mulberry32, smoothstep, DEG } from './utils.js';
+import { mulberry32, smoothstep, DEG, createCanvas, canvasTexture } from './utils.js';
+import { computeProceduralTextures } from './procedural-texture-job.js';
 
 // A camera-space cloud pass for the cloud-entry → continent handoff.
 //
@@ -21,9 +22,6 @@ const PLANE_COUNT = 80;
 const CORE_COUNT = 12;
 const NEAR = 0.14;
 const FAR = 3.6;
-const TEXTURE_COUNT = 6;
-const TEXTURE_SIZE = 384;
-const BACKDROP_SIZE = 512;
 
 const VERT = `
 varying vec2 vUv;
@@ -58,127 +56,29 @@ void main() {
 }
 `;
 
-function hash2(x, y, seed) {
-  let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 1013904223);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
-}
-
-function valueNoise(x, y, seed) {
-  const x0 = Math.floor(x);
-  const y0 = Math.floor(y);
-  const fx = x - x0;
-  const fy = y - y0;
-  const ux = fx * fx * (3 - 2 * fx);
-  const uy = fy * fy * (3 - 2 * fy);
-  const a = hash2(x0, y0, seed);
-  const b = hash2(x0 + 1, y0, seed);
-  const c = hash2(x0, y0 + 1, seed);
-  const d = hash2(x0 + 1, y0 + 1, seed);
-  return (a * (1 - ux) + b * ux) * (1 - uy) + (c * (1 - ux) + d * ux) * uy;
-}
-
-function fbm(x, y, seed, octaves = 5) {
-  let sum = 0;
-  let amp = 0.5;
-  let freq = 1;
-  let norm = 0;
-  for (let i = 0; i < octaves; i += 1) {
-    sum += valueNoise(x * freq, y * freq, seed + i * 17) * amp;
-    norm += amp;
-    amp *= 0.5;
-    freq *= 2.03;
-  }
-  return sum / norm;
-}
-
-function makeCloudTexture(size, seed) {
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
+function makeTexture({ width, height, data }) {
+  const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
-  const image = ctx.createImageData(size, size);
-  const data = image.data;
-
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const u = x / (size - 1);
-      const v = y / (size - 1);
-      const dx = (u - 0.5) * 2;
-      const dy = (v - 0.5) * 2;
-      const r = Math.sqrt(dx * dx + dy * dy);
-      // Keep the puff inside the plane: the plane edge is at r = 0.5. This is
-      // only a safety fade; the noise, not the radius, defines the shape.
-      const falloff = 1 - smoothstep(0.36, 0.48, r);
-
-      // Warp the lookup so the puff edge is billowy rather than circular.
-      const wx = (fbm(u * 2.2 + seed, v * 2.2, seed + 5) - 0.5) * 1;
-      const wy = (fbm(u * 2.2, v * 2.2 + seed, seed + 9) - 0.5) * 1;
-      const body = fbm((u + wx) * 3, (v + wy) * 3, seed);
-      const detail = fbm((u + wx) * 9, (v + wy) * 9, seed + 31);
-      const density = body * (0.65 + 0.35 * detail);
-
-      const alpha = smoothstep(0.3, 0.72, density) * falloff;
-      const i = (y * size + x) * 4;
-      data[i] = 255;
-      data[i + 1] = 255;
-      data[i + 2] = 255;
-      data[i + 3] = Math.round(alpha * 255);
-    }
-  }
-
+  const image = ctx.createImageData(width, height);
+  image.data.set(data);
   ctx.putImageData(image, 0, 0);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.NoColorSpace;
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.anisotropy = 4;
-  texture.needsUpdate = true;
-  return texture;
-}
-
-// A continuous cloud field for the backdrop. Unlike the puff textures this has
-// no radial falloff, so it can cover the whole frame and close the gaps between
-// the parallax billboards.
-function makeCloudFieldTexture(size, seed) {
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  const image = ctx.createImageData(size, size);
-  const data = image.data;
-
-  for (let y = 0; y < size; y += 1) {
-    for (let x = 0; x < size; x += 1) {
-      const u = x / (size - 1);
-      const v = y / (size - 1);
-      const wx = (fbm(u * 2.5, v * 2.5, seed + 5) - 0.5) * 0.9;
-      const wy = (fbm(u * 2.5, v * 2.5, seed + 9) - 0.5) * 0.9;
-      const body = fbm((u + wx) * 3.6, (v + wy) * 3.6, seed);
-      const detail = fbm((u + wx) * 11, (v + wy) * 11, seed + 31);
-      const density = body * (0.62 + 0.38 * detail);
-      const alpha = smoothstep(0.32, 0.68, density);
-
-      const i = (y * size + x) * 4;
-      data[i] = 255;
-      data[i + 1] = 255;
-      data[i + 2] = 255;
-      data[i + 3] = Math.round(alpha * 255);
-    }
-  }
-
-  ctx.putImageData(image, 0, 0);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.NoColorSpace;
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.anisotropy = 4;
-  texture.needsUpdate = true;
-  return texture;
+  return canvasTexture(canvas, { srgb: false });
 }
 
 export class CloudPass {
-  constructor(camera, textures) {
+  static async create(camera) {
+    const pixels = await computeProceduralTextures({ type: 'clouds' });
+    const textures = [];
+    try {
+      for (const image of pixels) textures.push(makeTexture(image));
+      return new CloudPass(camera, textures.slice(0, 6), textures.slice(6));
+    } catch (error) {
+      for (const texture of textures) texture.dispose();
+      throw error;
+    }
+  }
+
+  constructor(camera, maps, fields) {
     this.camera = camera;
     this.group = new THREE.Group();
     this.group.visible = false;
@@ -187,10 +87,6 @@ export class CloudPass {
     this.planes = [];
 
     const random = mulberry32(0x9e3779b9);
-    const maps = [];
-    for (let i = 0; i < TEXTURE_COUNT; i += 1) {
-      maps.push(makeCloudTexture(TEXTURE_SIZE, 11 + i * 37));
-    }
 
     this.backdrops = [
       { distance: 5, phase: 0, alpha: 0.82 },
@@ -200,7 +96,7 @@ export class CloudPass {
         new THREE.PlaneGeometry(1, 1),
         new THREE.ShaderMaterial({
           uniforms: {
-            uMap: { value: makeCloudFieldTexture(BACKDROP_SIZE, 97 + index * 131) },
+            uMap: { value: fields[index] },
             uOpacity: { value: 0 },
             uTint: { value: new THREE.Color(0xf4f8ff) },
             uMask: { value: 0 }

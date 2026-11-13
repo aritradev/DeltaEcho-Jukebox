@@ -72,14 +72,85 @@ export class SignalAudio {
     this.nextLights = 0;
     this.nextHit = 0;
     this.lightsStep = 0;
+    this.userGain = null;
+    this.muted = false;
+    this.volume = 1;
+    this.onStateChange = null;
+    this.failureStatus = null;
+    this.playRequested = false;
+    this.hasPlayed = false;
+    this.hasRun = false;
+  }
+
+  get state() {
+    let status;
+    if (this.failureStatus) status = this.failureStatus;
+    else if (!(window.AudioContext || window.webkitAudioContext) || this.ctx?.state === 'closed') status = 'unavailable';
+    else if (!this.ready) status = 'idle';
+    else if (this.ctx.state !== 'running') status = this.hasRun ? 'paused' : 'blocked';
+    else if (this.playRequested && this.region) status = 'playing';
+    else status = this.hasPlayed && this.region ? 'paused' : 'ready';
+    return { status, muted: this.muted, volume: this.volume };
+  }
+
+  emitState() {
+    this.onStateChange?.(this.state);
+  }
+
+  applyUserGain() {
+    if (!this.userGain || this.ctx?.state === 'closed') return;
+    const gain = this.userGain.gain;
+    gain.cancelScheduledValues(this.now);
+    gain.setValueAtTime(this.muted ? 0 : this.volume, this.now);
+  }
+
+  setMuted(muted) {
+    this.muted = Boolean(muted);
+    this.applyUserGain();
+    this.emitState();
+  }
+
+  setVolume(volume) {
+    if (!Number.isFinite(Number(volume))) return;
+    this.volume = clamp01(Number(volume));
+    this.applyUserGain();
+    this.emitState();
   }
 
   async init() {
     if (this.ready) return this.ctx;
+    try {
+      this.failureStatus = null;
+      const ctx = this.buildGraph();
+      this.emitState();
+      return ctx;
+    } catch (error) {
+      const ctx = this.ctx;
+      this.ctx = null;
+      this.ready = false;
+      this.userGain = null;
+      this.hasRun = false;
+      if (ctx && ctx.state !== 'closed') ctx.close().catch(() => {});
+      this.failureStatus = error.name === 'NotAllowedError' ? 'blocked' : 'unavailable';
+      this.emitState();
+      throw error;
+    }
+  }
+
+  buildGraph() {
     const Ctor = window.AudioContext || window.webkitAudioContext;
     if (!Ctor) throw new Error('Web Audio is not available');
     const ctx = new Ctor({ latencyHint: 'interactive' });
     this.ctx = ctx;
+    this.hasRun = ctx.state === 'running';
+    ctx.addEventListener('statechange', () => {
+      if (this.ctx !== ctx) return;
+      if (ctx.state === 'running') {
+        this.hasRun = true;
+        this.failureStatus = null;
+      }
+      this.emitState();
+    });
 
     const compressor = ctx.createDynamicsCompressor();
     compressor.threshold.value = -20;
@@ -91,7 +162,12 @@ export class SignalAudio {
     const master = ctx.createGain();
     master.gain.value = 0.0001;
     master.connect(compressor);
-    compressor.connect(ctx.destination);
+    // Flight fades affect master only; user mute/volume is the final output gate.
+    const userGain = ctx.createGain();
+    userGain.gain.value = this.muted ? 0 : this.volume;
+    compressor.connect(userGain);
+    userGain.connect(ctx.destination);
+    this.userGain = userGain;
     this.master = master;
 
     // Shared reverb: canopy sets the wet mix. The impulse itself is fixed so
@@ -266,7 +342,7 @@ export class SignalAudio {
       });
     }
     await this.initPromise;
-    if (this.ctx.state === 'suspended') await this.ctx.resume();
+    await this.resume();
     return this.ctx;
   }
 
@@ -276,7 +352,9 @@ export class SignalAudio {
 
   setDestination(region) {
     this.region = region || null;
+    if (!region) this.playRequested = false;
     this.setYear(this.year);
+    this.emitState();
   }
 
   setYear(year) {
@@ -363,28 +441,77 @@ export class SignalAudio {
     this.hitBus.gain.setTargetAtTime(on('disasters') ? 0.6 : 0, now, 0.2);
   }
 
+  // Explicit Play/Pause for the toolbar. Pausing suspends the context so the
+  // status becomes "Audio paused"; Play resumes it and fades the mix back in.
+  async togglePlay() {
+    const { status } = this.state;
+    if (status === 'unavailable') return;
+    if (status === 'playing') {
+      this.playRequested = false;
+      await this.suspend();
+      return;
+    }
+    if (!this.region) return;
+    try {
+      await this.start();
+      if (!this.region || this.state.status === 'unavailable') return;
+      this.fadeIn(0.6);
+    } catch (error) {
+      console.warn('Audio unavailable', error);
+      this.emitState();
+    }
+  }
+
   fadeIn(seconds = 1.6) {
-    if (!this.ready) return;
-    const now = this.now;
-    this.master.gain.cancelScheduledValues(now);
-    this.master.gain.setValueAtTime(Math.max(0.0001, this.master.gain.value), now);
-    this.master.gain.exponentialRampToValueAtTime(0.8, now + seconds);
+    if (this.ready && this.ctx.state !== 'closed' && this.region) {
+      const now = this.now;
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.setValueAtTime(Math.max(0.0001, this.master.gain.value), now);
+      this.master.gain.exponentialRampToValueAtTime(0.8, now + seconds);
+      this.playRequested = true;
+      this.hasPlayed = true;
+    }
+    this.emitState();
   }
 
   fadeOut(seconds = 0.8) {
-    if (!this.ready) return;
-    const now = this.now;
-    this.master.gain.cancelScheduledValues(now);
-    this.master.gain.setValueAtTime(Math.max(0.0001, this.master.gain.value), now);
-    this.master.gain.exponentialRampToValueAtTime(0.0001, now + seconds);
+    this.playRequested = false;
+    if (this.ready && this.ctx.state !== 'closed') {
+      const now = this.now;
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.setValueAtTime(Math.max(0.0001, this.master.gain.value), now);
+      this.master.gain.exponentialRampToValueAtTime(0.0001, now + seconds);
+    }
+    this.emitState();
   }
 
   async suspend() {
-    if (this.ctx && this.ctx.state === 'running') await this.ctx.suspend();
+    try {
+      if (this.ctx && this.ctx.state === 'running') await this.ctx.suspend();
+    } finally {
+      this.emitState();
+    }
   }
 
   async resume() {
-    if (this.ctx && this.ctx.state === 'suspended') await this.ctx.resume();
+    if (!this.ready) return this.start();
+    const ctx = this.ctx;
+    try {
+      if (!ctx || ctx.state === 'closed') throw new Error('Audio context is closed');
+      if (ctx.state !== 'running') await ctx.resume();
+      if (this.ctx !== ctx) return;
+      if (ctx.state !== 'running') throw new Error('Audio is blocked; try again from a user gesture');
+      this.hasRun = true;
+      this.failureStatus = null;
+      this.emitState();
+      return ctx;
+    } catch (error) {
+      if (this.ctx === ctx) {
+        this.failureStatus = ctx && ctx.state !== 'closed' ? 'blocked' : 'unavailable';
+        this.emitState();
+      }
+      throw error;
+    }
   }
 
   update() {
@@ -507,5 +634,11 @@ export class SignalAudio {
     this.ctx = null;
     this.ready = false;
     this.initPromise = null;
+    this.userGain = null;
+    this.playRequested = false;
+    this.hasPlayed = false;
+    this.hasRun = false;
+    this.failureStatus = null;
+    this.emitState();
   }
 }
