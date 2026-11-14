@@ -151,6 +151,32 @@ export const ATLAS = {
   }
 };
 
+// Screen-space overlay for the globe. Cluster badges are shown while the rig is
+// wider than `clusterDistance`; closer than that the badge splits into the
+// individual destination pins. `labelOffsets` are preferred caption positions for
+// the close south-east Bangladesh labels; the UI re-fans any caption that would
+// collide at the current camera angle. Pin tips always stay on the projected
+// coordinates.
+export const GLOBE_PINS = {
+  clusterDistance: 2.35,
+  staggerDistance: 1.8,
+  surfaceScale: 1.006,
+  facingThreshold: 0.08,
+  clusters: [
+    { countryId: 'bangladesh', label: 'Bangladesh', lat: 22.85, lon: 90.65 },
+    { countryId: 'nepal', label: 'Nepal \u00b7 Mount Everest', lat: 27.9881, lon: 86.925 },
+    { countryId: 'global_eic', label: 'USA \u00b7 Pacific Wildfires', lat: 41.5, lon: -121.5 }
+  ],
+  labelOffsets: {
+    dhaka: [0, 0],
+    sylhet: [22, -16],
+    chittagong: [34, 2],
+    sundarbans: [-34, 8],
+    coxs_bazar: [26, 38],
+    kutubdia_saint_martin: [54, 66]
+  }
+};
+
 export const STATES = {
   SOLAR_SYSTEM: { id: 1, name: 'solar system' },
   EARTH_APPROACH: { id: 2, name: 'earth approach' },

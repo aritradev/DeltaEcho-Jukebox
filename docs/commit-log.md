@@ -17,6 +17,7 @@ Newest last. Update this file whenever a commit is added.
 | 7 | this commit | 2026-10-30 | `feat: replace galaxy backdrop with a baked nebula sky` | `src/starfield.js`, `src/assets.js`, `src/main.js`, `assets/textures/smoke.png` (new), `README.md`, `AGENTS.md`, `docs/architecture.md`, `docs/commit-log.md` |
 | 8 | working tree | 2026-11-13 | `feat: add eight destinations, comparison pairs, and a three-dataset Studio` | `tools/build-regions.mjs`, `src/regions.js`, `src/region-imagery.js`, `src/ui.js`, `src/studio.js`, `src/filmstrip.js`, `index.html`, `styles.css`, `studio.html`, `studio.css`, `assets/data/nasa_eic_gallery_2000_2026_frames_and_cv_sonification.json`, `assets/textures/everest-*`, `assets/textures/wildfire*`, docs |
 | 9 | working tree | 2026-11-13 | `feat: add a Sonification Lab button, shared studio sky, in-place region switcher, and Play/Pause` | `index.html`, `styles.css`, `src/ui.js`, `src/main.js`, `src/signal-audio.js`, `studio.html`, `studio.css`, `src/studio-sky.js` (new), `src/studio.js`, `README.md`, `AGENTS.md`, `docs/architecture.md`, `docs/mobile-sheet.md`, `docs/commit-log.md` |
+| 10 | working tree | 2026-11-14 | `feat: add clustered globe pins and a zoomed destination overlay` | `index.html`, `styles.css`, `src/config.js`, `src/earth.js`, `src/main.js`, `src/ui.js`, `README.md`, `AGENTS.md`, `docs/architecture.md`, `docs/commit-log.md` |
 
 ---
 
@@ -154,6 +155,35 @@ Studio backdrop, and drops the typography pass. There is no commit hash yet.
 
 ---
 
+## 10. Working tree — clustered globe pins
+
+Uncommitted at the time of writing, stacked on entries 8 and 9.
+
+- `src/config.js`: `GLOBE_PINS` holds the split distance (`clusterDistance`), the
+  caption-stagger distance, the surface offset and back-face threshold, the three
+  cluster centroids/country IDs, and the preferred caption offsets.
+- `src/earth.js`: `getAzElTiltForDirection(localDirection)` reuses the tilt-frame
+  math for an arbitrary direction, so a badge click can align the camera without
+  moving the active region marker. `getRegionAzElTilt()` now delegates to it.
+- `src/main.js`: builds the badge/destination list from `REGIONS`, projects each pin
+  from the spinning Earth every frame, culls the far hemisphere, swaps clusters for
+  individual pins at `clusterDistance`, wires hover previews, and implements the
+  Bangladesh badge as a country-scale `enterFreeOrbit()` (no `FLYING` timeline).
+  Pins are hidden in `MODE.FLYING`/`MODE.ATLAS` and on the map stage.
+- `src/ui.js` + `index.html` + `styles.css`: the `#globe-pins` overlay, teardrop
+  badge and pin buttons, hover/focus/active styling, destination-open hiding, a
+  reduced-motion fallback, a `.region-row.preview` highlight, and a per-frame
+  caption solver that keeps labels clear of each other and of pin icons while tips
+  stay on their projected coordinates.
+- `README.md`, `AGENTS.md`, `docs/architecture.md` describe the overlay, its
+  thresholds, and the manual checks.
+
+**Reverting** removes the overlay and the `getAzElTiltForDirection()` helper; camera,
+flight, atlas, audio, and data behaviour are otherwise unchanged. There is no commit
+hash yet.
+
+---
+
 ## How to revert
 
 ```powershell
@@ -175,7 +205,7 @@ Notes:
 
 - Commits 2–6 are documentation only. Reverting any of them cannot break the app.
 - Entry 8 is an uncommitted working-tree change; there is no hash to revert until it
-  is committed. Entry 9 stacks on top of it and is also uncommitted.
+  is committed. Entries 9 and 10 stack on top of it and are also uncommitted.
 - Commit 7 changes only the sky backdrop. Reverting it restores the `galaxy.webp`
   sphere and does not touch camera, planets, Earth, or UI behaviour.
 - Commit 1 is the whole application. Never revert it unless you intend to delete the

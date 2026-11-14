@@ -713,7 +713,8 @@ body.pointing { cursor: pointer; }
 }
 .region-row:hover,
 .region-row:focus-visible,
-.region-row.active {
+.region-row.active,
+.region-row.preview {
   background: linear-gradient(90deg, rgba(160, 196, 236, 0.11), rgba(160, 196, 236, 0));
   border-left-color: var(--accent);
   outline: none;
@@ -1038,6 +1039,111 @@ body.pointing { cursor: pointer; }
   text-transform: uppercase;
   color: rgba(190, 214, 244, 0.72);
   text-shadow: 0 1px 10px rgba(0, 0, 0, 0.85);
+}
+
+/* ------------------------------------------------------------------ globe pins */
+
+.globe-pins {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  overflow: hidden;
+  transition: opacity 0.25s ease;
+}
+
+.globe-pins.is-hidden { opacity: 0; }
+.globe-pins.is-hidden .globe-pin { pointer-events: none; }
+
+.globe-pin {
+  --pin-x: 0px;
+  --pin-y: 0px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate3d(var(--pin-x), var(--pin-y), 0) translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: opacity 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.globe-pin.is-visible { opacity: 1; pointer-events: auto; }
+
+.pin-label {
+  display: block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(6, 10, 18, 0.88);
+  border: 1px solid rgba(178, 205, 236, 0.28);
+  color: #f1f5f9;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.65);
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.pin-icon {
+  display: block;
+  width: 24px;
+  height: 32px;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.7));
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.globe-pin.is-cluster .pin-icon { width: 30px; height: 38px; }
+
+.pin-body { fill: #f2604f; stroke: rgba(255, 236, 230, 0.55); stroke-width: 1; }
+.pin-core { fill: #ffffff; }
+.pin-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  fill: #111827;
+}
+
+.globe-pin:hover,
+.globe-pin:focus-visible,
+.globe-pin.is-active { z-index: 25; }
+
+.globe-pin:hover .pin-label,
+.globe-pin:focus-visible .pin-label,
+.globe-pin.is-active .pin-label {
+  border-color: var(--accent);
+  background: rgba(10, 16, 26, 0.95);
+}
+
+.globe-pin:hover .pin-icon,
+.globe-pin:focus-visible .pin-icon,
+.globe-pin.is-active .pin-icon { transform: scale(1.18) translateY(-2px); }
+
+.globe-pin:focus-visible { outline: none; }
+.globe-pin:focus-visible .pin-label {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+body.destination-open .globe-pins { opacity: 0; pointer-events: none; }
+body.destination-open .globe-pin { pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .globe-pins,
+  .globe-pin,
+  .pin-label,
+  .pin-icon { transition: none; }
 }
 
 /* ------------------------------------------------------------------ destination card */

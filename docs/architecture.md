@@ -114,8 +114,8 @@ The app instance is exposed as `window.__jukebox` for debugging.
 
 | Module | Owns | Depends on |
 | --- | --- | --- |
-| `src/main.js` | App composition, UI↔scene wiring, mode machine, render loop, hotspot raycasting | everything below |
-| `src/config.js` | All tuning constants: render, sun, planets, Earth, clouds, atmosphere, states, timelines, atlas | — |
+| `src/main.js` | App composition, UI↔scene wiring, mode machine, render loop, hotspot raycasting, globe pin projection | everything below |
+| `src/config.js` | All tuning constants: render, sun, planets, Earth, clouds, atmosphere, states, timelines, atlas, globe pins | — |
 | `src/region-imagery.js` | Locality plate files, acquisition dates, source credits, and display caveats | — |
 | `src/regions.js` | Generated destination index: coordinates, colours, availability, per-region yearly signals, comparison pairs | — |
 | `src/utils.js` | Math and DOM-canvas helpers, spherical conversions, seeded RNG | three |
@@ -138,7 +138,7 @@ The app instance is exposed as `window.__jukebox` for debugging.
 | `src/camera-director.js` | Camera rig, keyframes, transitions, region retargeting, derived scene parameters | three, gsap, config, utils |
 | `src/controls.js` | Drag/scroll/pinch input mapped to the rig, intent signaling | three, config |
 | `src/signal-audio.js` | Web Audio graph for the ten signals: continuous layers, plucks, arpeggio, percussion | regions |
-| `src/ui.js` | All DOM reads/writes, place explorer, signal panel, mobile sheet, year/compare state | gsap, regions |
+| `src/ui.js` | All DOM reads/writes, place explorer, signal panel, mobile sheet, globe pins, year/compare state | gsap, regions |
 
 ### Direction of dependencies
 
@@ -258,7 +258,7 @@ atlas.update()                          state -> texture offset/repeat, visibili
 cloudPass.update(delta, director.cloudPass)  billboard cloud intensity
 scene.updateMatrixWorld(true)
 
-updateHotspot(delta)                    raycast, region uniforms, anchor label
+updateHotspot(delta)                    raycast, region uniforms, anchor label, globe pins
 starfield.update(elapsed, camera)       parallax
 ui.setVeil(director.veil)               transition veil opacity
 
@@ -371,6 +371,34 @@ when `hotspotArmed` is true and both factors are above their thresholds. The HTM
 anchor label is positioned by projecting the region's world position to screen
 space — never by absolute CSS coordinates.
 
+### Globe pins
+
+`#globe-pins` is a screen-space button layer over the same sphere. `buildGlobePins()`
+creates one badge per `GLOBE_PINS.clusters` entry and one pin per `REGIONS` entry; the
+badge count comes from `countryId`, never a hand-written number. Each frame
+`updateGlobePins()` turns a pin direction into a world position on the spinning
+Earth, projects it with the camera, and passes only front-facing, on-screen views to
+`ui.updateGlobePins()`. `facing > GLOBE_PINS.facingThreshold` is the back-face test,
+so a destination on the far hemisphere cannot be clicked through the planet.
+
+The badge set is drawn while `director.rig.dist > GLOBE_PINS.clusterDistance`;
+closer, the same layer swaps to the individual destination pins (the two sets never
+appear together). The overlay is hidden in `MODE.FLYING` and `MODE.ATLAS`, on the map
+stage, and whenever `body.destination-open` is set.
+
+Badge selection is explicit. Bangladesh calls `focusBangladesh()`, which enters
+`MODE.EXPLORE` and tweens the rig to a country-scale free orbit; it starts no flight
+timeline, so `FLYING` is never set. A one-destination badge calls
+`selectDestination()` directly, as does an individual pin. Hovering a destination pin
+previews it: the marker moves, the place row and readout highlight, and
+`body.pointing` is set; leaving restores the active region. Badges are click-only.
+
+`ui.js` owns the pin DOM. It writes each projected position into `--pin-x`/`--pin-y`
+CSS variables and runs a caption solver each frame: `GLOBE_PINS.labelOffsets` is the
+preferred position, and a caption that would collide with another caption or a pin
+icon is fanned to a nearby side or stacked row. Pin tips never leave their projected
+coordinate.
+
 ---
 
 ## 10. UI layer
@@ -379,7 +407,9 @@ space — never by absolute CSS coordinates.
 place explorer from `REGIONS` and the signal rows from `SIGNALS`, and exposes
 intention-revealing methods (`setProgress`, `showDestination`, `showSignals`,
 `setYear`, `hidePanel`, `setVeil`, `setAnchor`, …) rather than letting callers poke
-at nodes.
+at nodes. It also owns `#globe-pins`: it builds the badge/pin buttons from the
+definitions in `main.js`, positions them from the projected views handed in each
+frame, and fans their captions. It never reads the camera or the rig.
 
 The panel has two views. `#places-view` is the Geographic Explorer: search, country
 groups, and destination rows. `#signals-view` is the destination view: ten layer
@@ -423,6 +453,7 @@ Overlay elements in `index.html`, back to front:
 #panel            place explorer / destination signal explorer / bottom sheet
 #selection-note   immediate feedback after a choice
 #anchor           projected hotspot label
+#globe-pins       projected cluster badges / destination pins
 #backbar          return control
 #hint             transient messages
 #loader           progress + space-dive reveal

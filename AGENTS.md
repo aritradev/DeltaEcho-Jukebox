@@ -22,7 +22,8 @@ Read this first, then the document that matches your task:
   from the Champion Edition dataset plus Mount Everest and the Pacific Northwest
   wildfires from the NASA EIC gallery — ending on a flat map stage with a signal
   panel and Web Audio sonification. The signal panel can switch destinations in
-  place, and its audio toolbar has an explicit Play/Pause control.
+  place, and its audio toolbar has an explicit Play/Pause control. The globe carries
+  clustered destination pins that split into individual pins when you zoom in.
 - Vanilla JavaScript ES modules. No framework, no bundler, no transpiler.
 - No npm dependencies. Three.js and GSAP are vendored (versions in `README.md`).
 - No backend. `server.mjs` is a static file server for local development only.
@@ -100,6 +101,7 @@ There is no `npm install`, no `npm test`, and no `npm run build`.
 | Texture loading | `src/assets.js` |
 | Web Audio layers and scheduling | `src/signal-audio.js` |
 | Overlay text, buttons, layout | `index.html` + `ui.js` |
+| Globe pin clusters, split distance, label offsets | `GLOBE_PINS` in `src/config.js` + `src/main.js` + `src/ui.js` |
 | Overlay appearance | `styles.css` |
 | App wiring, modes, render loop | `src/main.js` |
 | Shared math helpers | `src/utils.js` |
@@ -128,30 +130,36 @@ No automated tests exist. Before calling a change done:
    signal panel with the correct values. All eight use their configured locality
    plate; the provenance note identifies its source and date. The two NASA EIC
    destinations start at 2000 and expose only 2000–2026 in the slider and pair list.
-7. Signal toggles silence/restore their layer, the year slider changes values and
+7. The globe overlay shows three cluster badges in the wide view (Bangladesh `06`,
+   Nepal · Mount Everest `01`, USA · Pacific Wildfires `01`); clicking Bangladesh
+   orbits in and the badges split into eight individual destination pins. Pins on
+   the far hemisphere disappear, hovering a destination pin previews it in the place
+   list and readout, and clicking one starts its flight. The overlay is hidden during
+   the flight and on the map stage.
+8. Signal toggles silence/restore their layer, the year slider changes values and
    audio, and Compare alternates the two years in `#compare-pair-select` (and shows
    deltas while it runs). Signals-view `ArrowLeft`/`ArrowRight` step the year and
    `c` toggles Compare. The `#signal-region` header or its chevron opens the region
    switcher; choosing another destination updates the plate, marker, panel, and
    audio in place without flying back.
-8. The audio toolbar's Play/Pause button suspends and resumes playback in place
+9. The audio toolbar's Play/Pause button suspends and resumes playback in place
    (status changes to "Audio paused" and back to "Playing"); Mute and the volume
    slider keep working independently.
-9. Dragging rotates, scrolling zooms, and interrupting a flight restores manual
+10. Dragging rotates, scrolling zooms, and interrupting a flight restores manual
    control (and stops audio). Escape during an outbound flight skips it.
-10. The back button (and Escape, once in the region) returns to the view the flight
+11. The back button (and Escape, once in the region) returns to the view the flight
    started from — the Earth orbit if it started there, otherwise the solar system —
    and suspends audio.
-11. Clicking Earth from the wide view enters free orbit; the place explorer stays
+12. Clicking Earth from the wide view enters free orbit; the place explorer stays
    usable, selecting a destination works, and Back returns to that orbit framing
    with the panel enabled and the hotspot armed.
-12. The Studio loads its default filmstrip, `#dataset-select` swaps all three
+13. The Studio loads its default filmstrip, `#dataset-select` swaps all three
    datasets without reloading, the weather block hides for the two EIC series, and
    the scanline tracks playback. Its `#studio-sky` backdrop renders the nebula and
    drifting stars (or the CSS fallback), and the transport/readout panels stay
    legible over it.
-13. Resizing the window keeps the scene and overlays aligned.
-14. `git status` shows only the files you intended to change.
+14. Resizing the window keeps the scene and overlays aligned.
+15. `git status` shows only the files you intended to change.
 
 If your change touches shaders, also check on a second GPU or browser if possible;
 shader issues often appear only on one driver.

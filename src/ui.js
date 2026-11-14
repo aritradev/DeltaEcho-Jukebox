@@ -24,6 +24,26 @@ function formatCoord(value, positive, negative) {
   return `${Math.abs(value).toFixed(2)}\u00b0${value >= 0 ? positive : negative}`;
 }
 
+// Teardrop map marker. Cluster badges carry the destination count inside the
+// white inner circle; individual pins carry a plain dot.
+function pinIconMarkup(kind, count) {
+  if (kind === 'cluster') {
+    return [
+      '<svg class="pin-icon" viewBox="0 0 30 38" aria-hidden="true" focusable="false">',
+      '<path class="pin-body" d="M15 1.5C7.9 1.5 2.2 7.2 2.2 14.3c0 9.9 12.8 22.2 12.8 22.2s12.8-12.3 12.8-22.2C27.8 7.2 22.1 1.5 15 1.5Z"/>',
+      '<circle class="pin-core" cx="15" cy="14.3" r="8.4"/>',
+      `<text class="pin-count" x="15" y="14.3" text-anchor="middle" dominant-baseline="central">${escapeHtml(count)}</text>`,
+      '</svg>'
+    ].join('');
+  }
+  return [
+    '<svg class="pin-icon" viewBox="0 0 24 32" aria-hidden="true" focusable="false">',
+    '<path class="pin-body" d="M12 1.4C6.3 1.4 1.7 6 1.7 11.7c0 7.9 10.3 19.5 10.3 19.5s10.3-11.6 10.3-19.5C22.3 6 17.7 1.4 12 1.4Z"/>',
+    '<circle class="pin-core" cx="12" cy="11.7" r="3.4"/>',
+    '</svg>'
+  ].join('');
+}
+
 export class UI {
   constructor(handlers) {
     this.handlers = handlers;
@@ -81,6 +101,7 @@ export class UI {
       noteDest: document.getElementById('sn-dest'),
       anchor: document.getElementById('anchor'),
       anchorName: document.querySelector('#anchor .anchor-copy strong'),
+      globePins: document.getElementById('globe-pins'),
       backbar: document.getElementById('backbar'),
       backBtn: document.getElementById('back-btn'),
       backLabel: document.getElementById('back-label'),
@@ -121,6 +142,8 @@ export class UI {
     this.regionOptionEls = new Map();
     this.enabledSignals = new Set(SIGNALS.map((signal) => signal.key));
     this.signalRows = new Map();
+    this.globePinEls = new Map();
+    this.globePinsActive = null;
     this.compareTimer = null;
     this.compareIndex = 0;
     this.compareYearA = 1985;
@@ -290,6 +313,7 @@ export class UI {
   setActiveRegion(region) {
     this.activeRegion = region || null;
     this.syncRegionSwitcher();
+    this.syncGlobePins();
     if (!region) {
       this.applySelection();
       this.syncPeek();
@@ -319,6 +343,240 @@ export class UI {
     this.el.searchInput.value = '';
     this.setQuery('');
     if (focus) this.el.searchInput.focus();
+  }
+
+  // Hover preview from the globe pins. It highlights the matching row and the
+  // readout without changing the selected region, the year range, or the
+  // signals view.
+  setPlacePreview(region) {
+    const id = region?.id || null;
+    this.el.placeList.querySelectorAll('.region-row').forEach((row) => {
+      row.classList.toggle('preview', row.dataset.id === id);
+    });
+    if (region) this.setReadoutTarget(region);
+    else if (this.activeRegion) this.setReadoutTarget(this.activeRegion);
+  }
+
+  // ---------------------------------------------------------------- globe pins
+
+  // Builds one button per cluster badge and per destination pin. `main.js`
+  // projects the 3D anchors every frame and passes screen positions back in
+  // `updateGlobePins()`; this module never reads the camera.
+  buildGlobePins(pins) {
+    const container = this.el.globePins;
+    if (!container) return;
+    container.innerHTML = '';
+    this.globePinEls.clear();
+    this.globePinsActive = null;
+    container.classList.add('is-hidden');
+
+    for (const pin of pins) {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = pin.kind === 'cluster' ? 'globe-pin is-cluster' : 'globe-pin is-region';
+      el.dataset.pinId = pin.id;
+      el.tabIndex = -1;
+      el.setAttribute('aria-hidden', 'true');
+      if (pin.countryId) el.dataset.countryId = pin.countryId;
+      el.setAttribute(
+        'aria-label',
+        pin.kind === 'cluster'
+          ? `${pin.label}, ${pin.count} destinations`
+          : `Fly to ${pin.label}`
+      );
+      el.innerHTML = [
+        `<span class="pin-label">${escapeHtml(pin.label)}</span>`,
+        pinIconMarkup(pin.kind, pin.count)
+      ].join('');
+      el.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        this.handlers.onPinSelect?.(pin);
+      });
+      el.addEventListener('pointerenter', () => this.handlers.onPinHover?.(pin));
+      el.addEventListener('pointerleave', () => this.handlers.onPinHover?.(null));
+      el.addEventListener('focus', () => this.handlers.onPinHover?.(pin));
+      el.addEventListener('blur', () => this.handlers.onPinHover?.(null));
+      container.appendChild(el);
+      this.globePinEls.set(pin.id, el);
+    }
+
+    this.syncGlobePins();
+  }
+
+  syncGlobePins() {
+    if (!this.globePinEls.size) return;
+    const activeId = this.activeRegion?.id || null;
+    const activeCountry = this.activeRegion?.countryId || null;
+    for (const [id, el] of this.globePinEls) {
+      const active = el.dataset.countryId
+        ? el.dataset.countryId === activeCountry
+        : id === activeId;
+      el.classList.toggle('is-active', active);
+    }
+  }
+
+  showGlobePin(el, { x, y, offset }) {
+    if (!el.classList.contains('is-visible')) {
+      el.classList.add('is-visible');
+      el.tabIndex = 0;
+      el.removeAttribute('aria-hidden');
+    }
+    el.style.setProperty('--pin-x', `${x.toFixed(1)}px`);
+    el.style.setProperty('--pin-y', `${y.toFixed(1)}px`);
+    this.placePinLabel(el, offset);
+  }
+
+  placePinLabel(el, offset) {
+    const label = el.firstElementChild;
+    if (!label) return;
+    const dx = offset ? offset[0] : 0;
+    const dy = offset ? offset[1] : 0;
+    const transform = `translate(${dx}px, ${dy}px)`;
+    if (label.dataset.offset !== transform) {
+      label.style.transform = transform;
+      label.dataset.offset = transform;
+    }
+  }
+
+  // Neighbouring destinations project within a few pixels of each other in the
+  // wide view, so their captions would otherwise overlap each other and the
+  // pin icons. Each caption tries the hand-tuned offset first, then a small fan
+  // of side and stacked positions, and keeps the first one that is clear. Only
+  // the caption moves: the pin tips stay on the projected coordinate.
+  settlePinLabels(views) {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const boxes = [];
+    const icons = [];
+    for (const view of views) {
+      const el = this.globePinEls.get(view.id);
+      if (!el) continue;
+      const cluster = el.classList.contains('is-cluster');
+      const iconW = cluster ? 30 : 24;
+      const iconH = cluster ? 38 : 32;
+      icons.push({
+        l: view.x - iconW / 2,
+        r: view.x + iconW / 2,
+        t: view.y - iconH,
+        b: view.y
+      });
+      const label = el.firstElementChild;
+      if (!label) continue;
+      if (!el.pinLabelSize) {
+        const w = label.offsetWidth;
+        const h = label.offsetHeight;
+        if (!w || !h) continue;
+        el.pinLabelSize = { w, h };
+      }
+      const { w, h } = el.pinLabelSize;
+      boxes.push({
+        el,
+        view,
+        w,
+        h,
+        baseX: view.x,
+        baseY: view.y - iconH - 4 - h / 2
+      });
+    }
+    // Bottom-most captions claim their spot first, so the rest fan upwards.
+    boxes.sort((a, b) => b.baseY - a.baseY || a.view.id.localeCompare(b.view.id));
+    const placed = [];
+    const clear = (rect) => {
+      if (rect.l < 6 || rect.r > width - 6 || rect.t < 6 || rect.b > height - 6) return false;
+      for (const icon of icons) {
+        if (rect.l < icon.r + 3 && rect.r > icon.l - 3
+          && rect.t < icon.b + 3 && rect.b > icon.t - 3) return false;
+      }
+      for (const other of placed) {
+        if (rect.l < other.r + 4 && rect.r > other.l - 4
+          && rect.t < other.b + 4 && rect.b > other.t - 4) return false;
+      }
+      return true;
+    };
+    for (const box of boxes) {
+      const { el, view, w, h, baseX, baseY } = box;
+      const cluster = el.classList.contains('is-cluster');
+      const candidates = [];
+      if (view.offset) candidates.push(view.offset);
+      candidates.push([0, 0]);
+      if (cluster) {
+        // Badges sit on almost the same point, so stack their captions
+        // upwards: the bottom-most badge claims the closest row.
+        for (const dy of [-28, -56, 28, -84]) candidates.push([0, dy]);
+        for (const dy of [0, -28, 28]) {
+          candidates.push([w / 2 + 20, dy], [-(w / 2 + 20), dy]);
+        }
+      } else {
+        for (const dy of [0, -28, 28, -56]) {
+          candidates.push([w / 2 + 20, dy], [-(w / 2 + 20), dy], [0, dy]);
+        }
+      }
+      let chosen = null;
+      for (const [dx, dy] of candidates) {
+        const px = Math.round(dx);
+        const py = Math.round(dy);
+        const rect = {
+          l: baseX + px - w / 2,
+          r: baseX + px + w / 2,
+          t: baseY + py - h / 2,
+          b: baseY + py + h / 2
+        };
+        if (!clear(rect)) continue;
+        chosen = [px, py];
+        placed.push(rect);
+        break;
+      }
+      if (!chosen) {
+        for (let lift = 14; lift <= 126 && !chosen; lift += 14) {
+          const rect = {
+            l: baseX - w / 2,
+            r: baseX + w / 2,
+            t: baseY - lift - h / 2,
+            b: baseY - lift + h / 2
+          };
+          if (!clear(rect)) continue;
+          chosen = [0, -lift];
+          placed.push(rect);
+        }
+      }
+      if (!chosen) {
+        chosen = [0, 0];
+        placed.push({ l: baseX - w / 2, r: baseX + w / 2, t: baseY - h / 2, b: baseY + h / 2 });
+      }
+      this.placePinLabel(el, chosen);
+    }
+  }
+
+  hideGlobePin(el) {
+    if (!el.classList.contains('is-visible')) return;
+    el.classList.remove('is-visible');
+    el.tabIndex = -1;
+    el.setAttribute('aria-hidden', 'true');
+  }
+
+  // `views` holds only the pins that are currently front-facing and on screen.
+  // Everything else fades out, so a pin never survives a trip to the map stage
+  // or to the far hemisphere.
+  updateGlobePins(active, views = []) {
+    const container = this.el.globePins;
+    if (!container) return;
+    if (active !== this.globePinsActive) {
+      this.globePinsActive = active;
+      container.classList.toggle('is-hidden', !active);
+      if (!active && container.contains(document.activeElement)) document.activeElement.blur();
+    }
+    const seen = new Set();
+    for (const view of views) {
+      const el = this.globePinEls.get(view.id);
+      if (!el) continue;
+      seen.add(view.id);
+      this.showGlobePin(el, view);
+    }
+    this.settlePinLabels(views);
+    for (const [id, el] of this.globePinEls) {
+      if (!seen.has(id)) this.hideGlobePin(el);
+    }
   }
 
   setMapStatus(region, failed = false) {

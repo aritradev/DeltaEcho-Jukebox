@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 import { gsap } from '../vendor/gsap/index.js';
-import { RENDER, SUN, EARTH, STATES, TIMELINE, ATLAS } from './config.js';
-import { clamp, smoothstep, DEG } from './utils.js';
+import { RENDER, SUN, EARTH, STATES, TIMELINE, ATLAS, GLOBE_PINS } from './config.js';
+import { clamp, smoothstep, DEG, latLonToVector3 } from './utils.js';
 import { AssetLoader } from './assets.js';
 import { Starfield } from './starfield.js';
 import { SolarSystem } from './solar-system.js';
 import { Earth } from './earth.js';
 import { RegionMarker } from './region.js';
 import { Atlas, makeRegionPlate } from './atlas.js';
-import { REGION_BY_ID } from './regions.js';
+import { REGIONS, REGION_BY_ID } from './regions.js';
 import { REGION_IMAGERY } from './region-imagery.js';
 import { CloudPass } from './cloud-pass.js';
 import { CameraDirector } from './camera-director.js';
@@ -54,12 +54,18 @@ class App {
     this.skipping = false;
     this.hoveringHotspot = false;
     this.hotspotArmed = false;
+    this.globePins = [];
+    this.hoveredPinId = null;
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2(-10, -10);
     this.pointerInside = false;
     this._world = new THREE.Vector3();
     this._projected = new THREE.Vector3();
     this._hit = new THREE.Vector3();
+    this._pinWorld = new THREE.Vector3();
+    this._pinNormal = new THREE.Vector3();
+    this._pinCamera = new THREE.Vector3();
+    this._pinNdc = new THREE.Vector3();
     this.audio = new SignalAudio();
     this.selectionToken = 0;
     this.pendingSelection = null;
@@ -84,6 +90,8 @@ class App {
       onVolumeChange: (volume) => this.audio.setVolume(volume),
       onToggleAudio: () => this.toggleDestinationAudio(),
       onSwitchRegion: (region) => this.switchDestinationInAtlas(region),
+      onPinSelect: (pin) => this.onGlobePinSelect(pin),
+      onPinHover: (pin) => this.onGlobePinHover(pin),
       onCancelSelection: () => this.cancelSelection(),
       onRetrySelection: () => {
         if (this.pendingSelection) this.selectDestination(this.pendingSelection.region, this.pendingSelection.fromHotspot);
@@ -91,6 +99,7 @@ class App {
     });
     this.audio.onStateChange = (state) => this.ui.setAudioState(state);
     this.ui.setAudioState(this.audio.state);
+    this.buildGlobePins();
     if (!this.isWarmReturn) {
       this.loaderEffect = new SpaceDive(document.getElementById('loader-scene'));
       this.loaderEffect.start();
@@ -360,6 +369,107 @@ class App {
     this.ui.setActiveRegion(region);
   }
 
+  // Pins are static definitions; only their projection changes each frame. The
+  // cluster badges group every destination by country/EIC series, so the badge
+  // count comes from the generated region index rather than a hard-coded label.
+  buildGlobePins() {
+    const pins = [];
+    for (const cluster of GLOBE_PINS.clusters) {
+      const regions = REGIONS.filter((region) => region.countryId === cluster.countryId);
+      if (!regions.length) continue;
+      pins.push({
+        id: `cluster:${cluster.countryId}`,
+        kind: 'cluster',
+        countryId: cluster.countryId,
+        label: cluster.label,
+        count: String(regions.length).padStart(2, '0'),
+        regions,
+        direction: latLonToVector3(cluster.lat, cluster.lon, 1)
+      });
+    }
+    for (const region of REGIONS) {
+      pins.push({
+        id: `region:${region.id}`,
+        kind: 'region',
+        region,
+        label: region.name,
+        direction: latLonToVector3(region.lat, region.lon, 1),
+        labelOffset: GLOBE_PINS.labelOffsets[region.id] || null
+      });
+    }
+    this.globePins = pins;
+    this.ui.buildGlobePins(pins);
+  }
+
+  onGlobePinHover(pin) {
+    if (!this.started || !this.director || this.director.atlasVisible) return;
+    if (
+      !pin || pin.kind === 'cluster'
+      || this.mode === MODE.FLYING || this.mode === MODE.ATLAS
+    ) {
+      this.clearPinHover();
+      return;
+    }
+    if (this.hoveredPinId === pin.id) return;
+    this.hoveredPinId = pin.id;
+    this.region.setRegion(pin.region);
+    this.region.setHover(1);
+    this.ui.setPlacePreview(pin.region);
+    document.body.classList.add('pointing');
+  }
+
+  clearPinHover() {
+    if (!this.hoveredPinId) return;
+    this.hoveredPinId = null;
+    this.ui.setPlacePreview(null);
+    this.region.setRegion(this.currentRegion);
+    this.region.setHover(0);
+    document.body.classList.toggle('pointing', this.hoveringHotspot);
+  }
+
+  onGlobePinSelect(pin) {
+    if (!this.started || this.mode === MODE.FLYING || this.mode === MODE.ATLAS) return;
+    this.clearPinHover();
+    if (pin.kind === 'cluster') {
+      if (pin.countryId === 'bangladesh') this.focusBangladesh();
+      else if (pin.regions.length === 1) this.selectDestination(pin.regions[0], true);
+      return;
+    }
+    this.selectDestination(pin.region, true);
+  }
+
+  // Bangladesh's six destinations sit inside a few degrees of each other, so a
+  // single badge is the useful far-view control. Clicking it orbits in to the
+  // country; crossing `GLOBE_PINS.clusterDistance` then splits the badge into
+  // the six destination pins.
+  focusBangladesh() {
+    if (!this.started || this.mode === MODE.FLYING || this.mode === MODE.ATLAS) return;
+    const cluster = GLOBE_PINS.clusters.find((item) => item.countryId === 'bangladesh');
+    if (!cluster) return;
+    this.cancelSelection();
+    const direction = latLonToVector3(cluster.lat, cluster.lon, 1);
+    const { az } = this.earth.getAzElTiltForDirection(direction);
+    this.mode = MODE.EXPLORE;
+    this.hotspotArmed = false;
+    this.ui.setPanelEnabled(false);
+    this.ui.showHint('Bangladesh \u00b7 six destinations on the globe', 5);
+    this.director.enterFreeOrbit({
+      keepAz: false,
+      az,
+      dist: 1.95,
+      elDeg: 21,
+      fov: 40,
+      focus: 0.92,
+      duration: 4.6,
+      onComplete: () => {
+        if (this.mode !== MODE.EXPLORE) return;
+        this.hotspotArmed = true;
+        if (this.ui.isMobileSheet()) this.ui.setSheetState('peek');
+        this.ui.setPanelEnabled(true);
+      }
+    });
+  }
+
   // The AudioContext has to be created or resumed inside a user gesture, so it
   // is prepared on the selection click and only faded in once the flight lands.
   prepareAudio() {
@@ -417,6 +527,7 @@ class App {
 
   async selectDestination(region, fromHotspot = false) {
     if (!this.started || this.mode === MODE.FLYING || this.mode === MODE.ATLAS || !region) return;
+    this.clearPinHover();
     const token = ++this.selectionToken;
     this.pendingSelection = { region, fromHotspot };
     this.prepareAudio();
@@ -652,6 +763,7 @@ class App {
         document.body.classList.remove('pointing');
       }
       this.ui.setAnchor(0, 0, false);
+      this.ui.updateGlobePins(false);
       this.region.update(delta, this.elapsed, this.camera, 0);
       return;
     }
@@ -665,7 +777,7 @@ class App {
       this.director.regionVisibility * distanceFactor * (1 + this.director.punch * 0.55);
 
     let hovered = false;
-    if (active && this.pointerInside) {
+    if (active && this.pointerInside && !this.hoveredPinId) {
       this.raycaster.setFromCamera(this.pointer, this.camera);
       hovered = this.raycaster.intersectObject(this.region.hitTarget, false).length > 0;
     }
@@ -680,10 +792,64 @@ class App {
 
     this.region.update(delta, this.elapsed, this.camera, visibility * (0.3 + 0.7 * facingFactor));
     this.updateAnchorLabel(facingFactor, visibility);
+    this.updateGlobePins();
+  }
+
+  // Projects every front-facing pin from the spinning globe into screen space.
+  // The cluster set is drawn while the camera is wide; crossing the threshold
+  // swaps it for the individual destination pins in the same frame. Pins on the
+  // far hemisphere (or behind the camera) are omitted, so they cannot be
+  // clicked through the planet.
+  updateGlobePins() {
+    if (!this.globePins.length) return;
+    const active = this.mode !== MODE.ATLAS && this.mode !== MODE.FLYING
+      && !this.director.atlasVisible;
+    if (!active) {
+      this.ui.updateGlobePins(false);
+      return;
+    }
+
+    const rigDist = this.director.rig.dist;
+    const clusterMode = rigDist > GLOBE_PINS.clusterDistance;
+    const stagger = rigDist > GLOBE_PINS.staggerDistance;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const views = [];
+
+    for (const pin of this.globePins) {
+      const isCluster = pin.kind === 'cluster';
+      if (isCluster !== clusterMode) continue;
+
+      this._pinWorld
+        .copy(pin.direction)
+        .multiplyScalar(this.earth.radius * GLOBE_PINS.surfaceScale);
+      this.earth.spin.localToWorld(this._pinWorld);
+      this._pinNormal
+        .copy(pin.direction)
+        .transformDirection(this.earth.spin.matrixWorld)
+        .normalize();
+      this._pinCamera.subVectors(this.camera.position, this._pinWorld).normalize();
+      const facing = this._pinNormal.dot(this._pinCamera);
+      if (facing <= GLOBE_PINS.facingThreshold) continue;
+
+      this._pinNdc.copy(this._pinWorld).project(this.camera);
+      const x = (this._pinNdc.x * 0.5 + 0.5) * width;
+      const y = (-this._pinNdc.y * 0.5 + 0.5) * height;
+      if (this._pinNdc.z > 1 || x < -180 || x > width + 180 || y < -140 || y > height + 100) continue;
+
+      views.push({
+        id: pin.id,
+        x,
+        y,
+        offset: stagger && !isCluster ? pin.labelOffset : null
+      });
+    }
+
+    this.ui.updateGlobePins(true, views);
   }
 
   updateAnchorLabel(facingFactor, visibility) {
-    if (visibility < 0.3 || facingFactor < 0.12) {
+    if (this.hoveredPinId || visibility < 0.3 || facingFactor < 0.12) {
       this.ui.setAnchor(0, 0, false);
       return;
     }

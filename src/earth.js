@@ -305,16 +305,23 @@ export class Earth {
       .add(this._center);
   }
 
-  getRegionAzElTilt() {
-    this.getRegionWorldPosition(this._v).sub(this._center);
+  // Azimuth/elevation of an arbitrary local direction in the tilt frame. The
+  // globe pin overlay uses this to align the camera with a cluster centroid
+  // without moving the single active region marker.
+  getAzElTiltForDirection(localDirection) {
+    this.frameNode.getWorldQuaternion(this._q);
+    this._v.copy(localDirection).applyQuaternion(this._q).normalize();
     if (this._v.lengthSq() < 1e-12) return { az: 0, el: 0 };
-    this._v.normalize();
     this.orbitFrameQuaternion(this._q).invert();
     this._v.applyQuaternion(this._q);
     return {
       az: Math.atan2(this._v.x, this._v.z),
       el: Math.asin(clamp(this._v.y, -1, 1))
     };
+  }
+
+  getRegionAzElTilt() {
+    return this.getAzElTiltForDirection(this.regionLocalDirection);
   }
 
   getLocalSunDirection(target) {
